@@ -1,8 +1,24 @@
-export default function Home() {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-medium">VendorHub</h1>
-      <p className="mt-4 text-gray-500">Vendor Management Portal — scaffold complete</p>
-    </main>
-  )
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+
+export default async function Home() {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (user) {
+      const role = user.user_metadata?.role || 'VENDOR'
+      if (role === 'VENDOR') {
+        redirect('/vendor/dashboard')
+      } else {
+        redirect('/staff/queue')
+      }
+    }
+  } catch {
+    // Supabase not configured yet — fall through to login redirect
+  }
+
+  redirect('/auth/login')
 }
