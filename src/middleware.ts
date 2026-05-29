@@ -1,11 +1,11 @@
+import { type NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
-import { NextResponse, type NextRequest } from 'next/server'
 
 const supabaseConfigured =
   process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith('https://') &&
   !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export async function updateSession(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   if (!supabaseConfigured) {
     return NextResponse.next({ request })
   }
@@ -37,11 +37,47 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+  const pathname = request.nextUrl.pathname
+
+  const publicRoutes = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/verify-email',
+    '/auth/callback',
+    '/',
+  ]
+  if (publicRoutes.some((route) => pathname.startsWith(route))) {
+    return supabaseResponse
+  }
+
+  if (!user) {
     const url = request.nextUrl.clone()
     url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
+  const role = user.user_metadata?.role || 'VENDOR'
+
+  if (pathname.startsWith('/staff') && role === 'VENDOR') {
+    const url = request.nextUrl.clone()
+    url.pathname = '/vendor/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  if (
+    pathname.startsWith('/vendor') &&
+    (role === 'STAFF' || role === 'ADMIN')
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/staff/queue'
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
+}
+
+export const config = {
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|api/webhooks|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }
