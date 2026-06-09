@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -11,7 +12,16 @@ export async function GET(request: Request) {
 
     if (!error && data.user) {
       const role = data.user.user_metadata?.role || 'VENDOR'
-      const redirectTo = role === 'VENDOR' ? '/vendor/dashboard' : '/staff/queue'
+
+      if (role !== 'VENDOR') {
+        return NextResponse.redirect(`${origin}/staff/queue`)
+      }
+
+      const vendorProfile = await prisma.vendorProfile.findUnique({
+        where: { userId: data.user.id },
+      })
+
+      const redirectTo = vendorProfile ? '/vendor/dashboard' : '/vendor/profile/complete'
       return NextResponse.redirect(`${origin}${redirectTo}`)
     }
   }
