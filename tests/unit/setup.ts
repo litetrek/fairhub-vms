@@ -6,7 +6,8 @@ vi.mock('@/lib/prisma', () => ({
     $transaction: vi.fn(),
     user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     vendorProfile: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-    application: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    application: { findMany: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
+    applicationWeek: { deleteMany: vi.fn(), createMany: vi.fn() },
     event: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     boothType: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     eventAddOn: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
@@ -17,7 +18,7 @@ vi.mock('@/lib/prisma', () => ({
     invoiceLineItem: { createMany: vi.fn() },
     payment: { create: vi.fn(), aggregate: vi.fn() },
     approvalLog: { create: vi.fn() },
-    document: { findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+    document: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
   },
 }))
 
