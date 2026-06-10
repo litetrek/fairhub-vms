@@ -138,6 +138,31 @@
 - `src/lib/invoices.ts` had stale references to `boothAddOn` (renamed to `eventAddOn`
   in the Stage 5 schema); corrected includes and all property accesses
 
+### Stage 5 — Smoke Test Results (all passed)
+- ✅ Step 1: Create event — form works, slug auto-suggests from name
+- ✅ Step 2: Setup hub — booth types, add-ons, weeks, doc requirements
+  all create and save correctly
+- ✅ Step 3: Publish — blocks without slug, succeeds with slug, status
+  flips to OPEN
+- ✅ Step 4: Public page — renders without login, booth cards correct,
+  "Request a Booth" redirects to /auth/login when logged out
+- ✅ Step 5: Vendor application — booth type dropdown populates from
+  admin-created data, eventId correctly pre-selected from /fair/[slug]
+- ✅ Step 6: Invoice page — loads without boothAddOn reference errors
+
+### Stage 5 — Bugs Found and Fixed During Testing
+- /fair/[slug] redirected to login — fixed by whitelisting /fair/* as
+  public in src/proxy.ts
+- "Request a Booth" defaulted to wrong event — fixed by passing eventId
+  as query parameter from /fair/[slug] to /vendor/applications/new
+- Document labels invisible on Step 3 (Documents) — contrast fix applied
+- Review card text invisible on Step 4 (Review) — contrast fix applied
+
+### Stage 5 — Known Ongoing Issue
+- Dark surface text contrast problems exist throughout the app on the
+  festive (dark) surface. Being fixed incrementally as encountered.
+  Not blocking. Track and resolve before public launch.
+
 #### Convention established
 - Different booth sizes = different `BoothType` rows (Option A — no `BoothTypeWeek`
   join table; all weeks available for all booth types)
@@ -233,5 +258,5 @@
 
 ---
 
-*Last updated: Stage 5 complete — Pre-Event Setup (admin CRUD), Public Discovery page,
-schema updated with EventAddOn + mapEmbedUrl + whatsIncluded + Event.updatedAt*
+*Last updated: Stage 5 complete and verified — all smoke tests passed,
+bugs fixed, QA test suite (Stage 6) starting next*
