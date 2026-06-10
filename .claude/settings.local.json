@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(npx prisma *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\vince\\\\code-projects\\\\fairhub-vms\" -Recurse -Directory)",
+      "Bash(ConvertTo-Json -Depth 10)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(del src\\\\middleware.ts)",
+      "Bash(npm run *)",
+      "Bash(node -e \"const m = require\\('c:/Users/vince/code-projects/fairhub-vms/node_modules/@prisma/adapter-pg'\\); console.log\\(Object.keys\\(m\\)\\)\")",
+      "Bash(node -e \"const {PrismaPg} = require\\('c:/Users/vince/code-projects/fairhub-vms/node_modules/@prisma/adapter-pg'\\); const p = new PrismaPg; console.log\\(p.constructor.length, Object.getPrototypeOf\\(p\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git stash *)",
+      "Bash(grep -v \"^$\")",
+      "Bash(node -e \"require\\('dotenv'\\)\")",
+      "Bash(git checkout *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\vince\\\\code-projects\\\\fairhub-vms\" -Force)",
+      "Bash(Select-Object Name, Mode)"
+    ]
+  }
+}

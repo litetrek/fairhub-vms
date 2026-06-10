@@ -1,19 +1,13 @@
 // ============================================================
 // VendorHub — Prisma Schema
-// Updated: Stage 3 pre-work (Pre-Event Setup support)
-// Changes from previous version:
-//   - Event: added description, hours, address/city/state,
-//     publicSlug, bannerImageUrl, maxVendors, applicationDeadline
-//   - New model: BoothType (replaces free-text boothTypePref)
-//   - New model: BoothTypeDocRequirement (per-type doc rules)
-//   - New model: EventWeek (selectable weeks within an event)
-//   - New model: ApplicationWeek (which weeks a vendor applied for)
-//   - New model: BoothAddOn (per-booth add-ons with pricing)
-//   - New model: ApplicationAddOn (add-ons selected per application)
-//   - Booth: simplified — no longer drives pricing (BoothType does);
-//     retained for staff assignment with booth number
-//   - Application: replaced boothTypePref/boothSizePref strings
-//     with boothTypeId FK; added rejectionNote
+// Updated: Stage 5 (Pre-Event Setup + Public Discovery)
+// Changes from Stage 4:
+//   - Event: added mapEmbedUrl, updatedAt
+//   - BoothType: added whatsIncluded; added addOns relation (EventAddOn)
+//   - New model: EventAddOn (setup-time add-ons tied to event/booth type)
+//   - ApplicationAddOn: rerouted FK from BoothAddOn → EventAddOn
+//   - Event: added addOns relation (EventAddOn)
+//   - BoothAddOn (physical booth level) retained unchanged
 // ============================================================
 
 generator client {
@@ -33,7 +27,7 @@ model User {
   role          Role     @default(VENDOR)
   emailVerified Boolean  @default(false)
   createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  updatedAt     DateTime @default(now()) @updatedAt
 
   vendorProfile    VendorProfile?
   sentMessages     Message[]         @relation("SentMessages")
@@ -50,8 +44,8 @@ enum Role {
 }
 
 model VendorProfile {
-  id           String  @id @default(uuid())
-  userId       String  @unique
+  id           String   @id @default(uuid())
+  userId       String   @unique
   businessName String
   contactName  String
   businessType String?
@@ -84,17 +78,20 @@ model Event {
   address             String?
   city                String?
   state               String?
+  mapEmbedUrl         String?     // NEW: Google Maps embed URL for public page
   publicSlug          String?     @unique
   bannerImageUrl      String?
   maxVendors          Int?
   applicationDeadline DateTime?
   status              EventStatus @default(DRAFT)
   createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @default(now()) @updatedAt  // NEW
 
   applications Application[]
   booths       Booth[]
   boothTypes   BoothType[]
   weeks        EventWeek[]
+  addOns       EventAddOn[]  // NEW
 }
 
 enum EventStatus {
@@ -114,26 +111,28 @@ model EventWeek {
   endDate   DateTime
   sortOrder Int      @default(0)
 
-  event        Event              @relation(fields: [eventId], references: [id])
+  event        Event             @relation(fields: [eventId], references: [id])
   applications ApplicationWeek[]
 }
 
 // ─── BOOTH TYPES ─────────────────────────────────────────────
 
 model BoothType {
-  id           String  @id @default(uuid())
-  eventId      String
-  name         String
-  description  String?
-  basePrice    Decimal @db.Decimal(10, 2)
-  sizeSqft     Int?
-  totalCount   Int
-  sortOrder    Int     @default(0)
-  createdAt    DateTime @default(now())
+  id            String   @id @default(uuid())
+  eventId       String
+  name          String
+  description   String?
+  whatsIncluded String?  // NEW: freeform list of what comes with this booth type
+  basePrice     Decimal  @db.Decimal(10, 2)
+  sizeSqft      Int?
+  totalCount    Int
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
 
-  event                Event                    @relation(fields: [eventId], references: [id])
-  docRequirements      BoothTypeDocRequirement[]
-  applications         Application[]
+  event           Event                     @relation(fields: [eventId], references: [id])
+  docRequirements BoothTypeDocRequirement[]
+  applications    Application[]
+  addOns          EventAddOn[]              // NEW
 }
 
 // ─── BOOTH TYPE DOCUMENT REQUIREMENTS ────────────────────────
@@ -148,6 +147,26 @@ model BoothTypeDocRequirement {
   boothType BoothType @relation(fields: [boothTypeId], references: [id])
 
   @@unique([boothTypeId, docType])
+}
+
+// ─── EVENT ADD-ONS ───────────────────────────────────────────
+// Setup-time add-ons (electricity, extra space, etc.) defined by staff
+// during Pre-Event Setup. Vendors select these during the application.
+// boothTypeId = null means the add-on is available for all booth types.
+
+model EventAddOn {
+  id          String   @id @default(uuid())
+  eventId     String
+  boothTypeId String?  // null = available for all booth types
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  event        Event              @relation(fields: [eventId], references: [id])
+  boothType    BoothType?         @relation(fields: [boothTypeId], references: [id])
+  selections   ApplicationAddOn[]
 }
 
 // ─── APPLICATIONS ────────────────────────────────────────────
@@ -165,12 +184,12 @@ model Application {
   specialRequests    String?
   rejectionNote      String?
   submittedAt        DateTime?
-  updatedAt          DateTime          @updatedAt
+  updatedAt          DateTime          @default(now()) @updatedAt
   createdAt          DateTime          @default(now())
 
-  vendor       VendorProfile    @relation(fields: [vendorId], references: [id])
-  event        Event            @relation(fields: [eventId], references: [id])
-  boothType    BoothType?       @relation(fields: [boothTypeId], references: [id])
+  vendor       VendorProfile     @relation(fields: [vendorId], references: [id])
+  event        Event             @relation(fields: [eventId], references: [id])
+  boothType    BoothType?        @relation(fields: [boothTypeId], references: [id])
   weeks        ApplicationWeek[]
   documents    Document[]
   approvalLogs ApprovalLog[]
@@ -279,6 +298,8 @@ enum BoothStatus {
 }
 
 // ─── BOOTH ADD-ONS ───────────────────────────────────────────
+// Physical booth-level add-ons (retained from Stage 4).
+// Not used in the application flow — see EventAddOn for that.
 
 model BoothAddOn {
   id      String  @id @default(uuid())
@@ -286,22 +307,22 @@ model BoothAddOn {
   name    String
   price   Decimal @db.Decimal(10, 2)
 
-  booth             Booth              @relation(fields: [boothId], references: [id])
-  applicationAddOns ApplicationAddOn[]
+  booth Booth @relation(fields: [boothId], references: [id])
 }
 
 // ─── APPLICATION ADD-ONS ─────────────────────────────────────
+// Records which EventAddOns a vendor selected on their application.
 
 model ApplicationAddOn {
   id            String @id @default(uuid())
   applicationId String
-  boothAddOnId  String
+  eventAddOnId  String  // CHANGED: was boothAddOnId → now eventAddOnId
   quantity      Int    @default(1)
 
   application Application @relation(fields: [applicationId], references: [id])
-  boothAddOn  BoothAddOn  @relation(fields: [boothAddOnId], references: [id])
+  eventAddOn  EventAddOn  @relation(fields: [eventAddOnId], references: [id])  // CHANGED
 
-  @@unique([applicationId, boothAddOnId])
+  @@unique([applicationId, eventAddOnId])  // CHANGED
 }
 
 // ─── BOOTH ASSIGNMENT ────────────────────────────────────────
@@ -335,9 +356,9 @@ model Invoice {
   dueDate           DateTime?
   issuedAt          DateTime      @default(now())
 
-  vendor          VendorProfile    @relation(fields: [vendorId], references: [id])
-  application     Application      @relation(fields: [applicationId], references: [id])
-  boothAssignment BoothAssignment? @relation(fields: [boothAssignmentId], references: [id])
+  vendor          VendorProfile     @relation(fields: [vendorId], references: [id])
+  application     Application       @relation(fields: [applicationId], references: [id])
+  boothAssignment BoothAssignment?  @relation(fields: [boothAssignmentId], references: [id])
   lineItems       InvoiceLineItem[]
   payments        Payment[]
 }

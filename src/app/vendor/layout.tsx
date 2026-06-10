@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
@@ -32,26 +33,32 @@ export default async function VendorLayout({
     .toUpperCase()
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900">VendorHub</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-sm text-slate-500">Vendor Portal</span>
+    <div className="min-h-screen bg-background" data-surface="festive">
+      <header className="bg-card border-b border-border px-6 h-14 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/images/glowfest-logo.png"
+            alt="GLOWFEST"
+            height={32}
+            width={120}
+            className="object-contain"
+          />
+          <span className="text-border">|</span>
+          <span className="text-sm text-muted-foreground">Vendor Portal</span>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-slate-100 flex items-center justify-center text-xs font-medium text-slate-600">
+            <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-medium text-muted-foreground">
               {initials}
             </div>
-            <span className="text-sm text-slate-600">{businessName}</span>
+            <span className="text-sm text-muted-foreground">{businessName}</span>
           </div>
           <form action={signOut}>
             <Button
               variant="ghost"
               size="sm"
               type="submit"
-              className="text-slate-500 text-xs"
+              className="text-muted-foreground text-xs"
             >
               Sign out
             </Button>
@@ -59,13 +66,13 @@ export default async function VendorLayout({
         </div>
       </header>
 
-      <nav className="bg-white border-b border-slate-100 px-6">
+      <nav className="bg-card border-b border-border px-6">
         <div className="flex gap-1">
           {navLinks.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className="px-3 py-3 text-sm text-slate-500 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+              className="px-3 py-3 text-sm text-muted-foreground hover:text-foreground border-b-2 border-transparent hover:border-primary transition-colors"
             >
               {label}
             </Link>

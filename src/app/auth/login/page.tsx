@@ -177,6 +177,11 @@ export default function LoginPage() {
             <GoogleIcon />
             {googleLoading ? 'Redirecting...' : 'Continue with Google'}
           </Button>
+          <Link href="/staff/login">
+            <Button type="button" variant="outline" className="w-full text-slate-600">
+              Staff login
+            </Button>
+          </Link>
         </div>
       </Card>
     </div>

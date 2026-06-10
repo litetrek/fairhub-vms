@@ -1,0 +1,59 @@
+import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
+
+async function requireStaffOrAdmin() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } })
+  if (!dbUser || dbUser.role === 'VENDOR') return null
+  return user
+}
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await requireStaffOrAdmin()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id } = await params
+  const weeks = await prisma.eventWeek.findMany({
+    where: { eventId: id },
+    orderBy: { sortOrder: 'asc' },
+  })
+  return NextResponse.json(weeks)
+}
+
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const user = await requireStaffOrAdmin()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { id: eventId } = await params
+
+  try {
+    const body = await request.json()
+    const { label, startDate, endDate, sortOrder = 0 } = body
+
+    if (!label || !startDate || !endDate) {
+      return NextResponse.json({ error: 'label, startDate, and endDate are required' }, { status: 400 })
+    }
+
+    const week = await prisma.eventWeek.create({
+      data: {
+        eventId,
+        label,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        sortOrder: Number(sortOrder),
+      },
+    })
+    return NextResponse.json(week, { status: 201 })
+  } catch {
+    return NextResponse.json({ error: 'Failed to create week' }, { status: 500 })
+  }
+}

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
 import { signOut } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 
@@ -8,10 +9,10 @@ const navLinks = [
   { href: '/staff/queue', label: 'Review queue' },
   { href: '/staff/booths', label: 'Booth map' },
   { href: '/staff/invoices', label: 'Invoices' },
-  { href: '/staff/messages', label: 'Messages' },
+  { href: '/admin/events', label: 'Event setup' },
 ]
 
-export default async function StaffLayout({
+export default async function AdminLayout({
   children,
 }: {
   children: React.ReactNode
@@ -20,19 +21,21 @@ export default async function StaffLayout({
   const {
     data: { user },
   } = await supabase.auth.getUser()
-
   if (!user) redirect('/auth/login')
 
-  const role = user.user_metadata?.role
-  if (role === 'VENDOR') redirect('/vendor/dashboard')
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  })
+  if (!dbUser || dbUser.role === 'VENDOR') redirect('/vendor/dashboard')
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background" data-surface="clean">
       <header className="bg-white border-b border-slate-200 px-6 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="font-medium text-slate-900">VendorHub</span>
           <span className="text-slate-300">|</span>
-          <span className="text-sm text-slate-500">Staff Portal</span>
+          <span className="text-sm text-slate-500">Admin</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-600">{user.email}</span>

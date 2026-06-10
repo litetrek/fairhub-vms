@@ -20,7 +20,12 @@ export async function login(formData: FormData) {
     return { error: error.message }
   }
 
-  const role = data.user?.user_metadata?.role || 'VENDOR'
+  // Read role from the User table — metadata may be absent for staff accounts.
+  const dbUser = await prisma.user.findUnique({
+    where: { id: data.user.id },
+    select: { role: true },
+  })
+  const role = dbUser?.role ?? 'VENDOR'
 
   revalidatePath('/', 'layout')
 

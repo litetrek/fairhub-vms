@@ -22,7 +22,7 @@ export default async function ProfileCompletePage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <ProfileCompleteForm userId={user.id} email={user.email!} />
     </div>
   )

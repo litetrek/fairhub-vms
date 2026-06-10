@@ -53,11 +53,11 @@ export default function ProfileCompleteForm({ userId, email }: Props) {
   return (
     <div className="w-full max-w-md">
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-medium text-slate-900">VendorHub</h1>
-        <p className="text-slate-500 mt-1 text-sm">Annual Vendor &amp; Exhibitor Portal</p>
+        <h1 className="text-3xl font-medium text-foreground">GLOWFEST</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Annual Vendor &amp; Exhibitor Portal</p>
       </div>
 
-      <Card className="border-slate-200 shadow-sm">
+      <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-xl font-medium">Complete your profile</CardTitle>
           <CardDescription>
@@ -100,7 +100,7 @@ export default function ProfileCompleteForm({ userId, email }: Props) {
             <div className="space-y-1.5">
               <Label htmlFor="phone">
                 Phone{' '}
-                <span className="text-slate-400 font-normal">(optional)</span>
+                <span className="text-muted-foreground font-normal">(optional)</span>
               </Label>
               <Input
                 id="phone"

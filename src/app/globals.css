@@ -8,8 +8,9 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -117,6 +118,70 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ─── Glowfest theme — brand identity layer (set on <html data-theme="glowfest">) ─── */
+[data-theme="glowfest"] {
+  --primary: oklch(0.52 0.27 340);              /* magenta #E0218A */
+  --primary-foreground: oklch(0.97 0.01 285);   /* near-white */
+  --secondary: oklch(0.76 0.16 72);             /* amber #F4A93C */
+  --secondary-foreground: oklch(0.12 0.03 280);
+  --accent: oklch(0.80 0.12 183);               /* teal #2DD4BF */
+  --accent-foreground: oklch(0.12 0.03 280);
+  --ring: oklch(0.52 0.27 340 / 0.65);
+  --destructive: oklch(0.64 0.22 29);
+}
+
+/* ─── Festive surface — dark night-market (vendor + auth wrappers) ─── */
+[data-surface="festive"] {
+  --background: oklch(0.09 0.04 280);           /* #0D0B1F */
+  --foreground: oklch(0.97 0.02 285);           /* #F5F3FF */
+  --card: oklch(0.155 0.05 280);                /* #1A1730 */
+  --card-foreground: oklch(0.97 0.02 285);
+  --popover: oklch(0.155 0.05 280);
+  --popover-foreground: oklch(0.97 0.02 285);
+  --muted: oklch(0.20 0.05 280);
+  --muted-foreground: oklch(0.68 0.07 290);     /* #A39FC4 */
+  --border: oklch(0.22 0.05 280);               /* #2A2545 */
+  --input: oklch(0.22 0.05 280);
+  --sidebar: oklch(0.12 0.04 280);
+  --sidebar-foreground: oklch(0.97 0.02 285);
+  --sidebar-primary: oklch(0.52 0.27 340);
+  --sidebar-primary-foreground: oklch(0.97 0.01 285);
+  --sidebar-accent: oklch(0.20 0.05 280);
+  --sidebar-accent-foreground: oklch(0.97 0.02 285);
+  --sidebar-border: oklch(0.22 0.05 280);
+  --sidebar-ring: oklch(0.52 0.27 340 / 0.65);
+  /* glow shadows — use via .glow-primary / .glow-secondary / .glow-accent */
+  --glow-primary: 0 0 24px 4px oklch(0.52 0.27 340 / 0.45);
+  --glow-secondary: 0 0 24px 4px oklch(0.76 0.16 72 / 0.35);
+  --glow-accent: 0 0 20px 3px oklch(0.80 0.12 183 / 0.35);
+  /* subtle ambient radial gradient behind page content */
+  background-image:
+    radial-gradient(ellipse 80% 50% at 50% -5%, oklch(0.52 0.27 340 / 0.08) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 40% at 85% 100%, oklch(0.76 0.16 72 / 0.05) 0%, transparent 55%);
+}
+
+/* ─── Clean surface — staff area (light, high legibility) ─── */
+[data-surface="clean"] {
+  --background: oklch(0.975 0 0);
+  --foreground: oklch(0.23 0.025 250);          /* dark slate */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.23 0.025 250);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.23 0.025 250);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.55 0.015 260);
+  --border: oklch(0.91 0 0);
+  --input: oklch(0.91 0 0);
+  --sidebar: oklch(0.99 0 0);
+  --sidebar-foreground: oklch(0.23 0.025 250);
+  --sidebar-primary: oklch(0.52 0.27 340);      /* magenta used sparingly */
+  --sidebar-primary-foreground: oklch(0.97 0.01 285);
+  --sidebar-accent: oklch(0.95 0 0);
+  --sidebar-accent-foreground: oklch(0.23 0.025 250);
+  --sidebar-border: oklch(0.91 0 0);
+  --sidebar-ring: oklch(0.52 0.27 340 / 0.4);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -127,4 +192,51 @@
   html {
     @apply font-sans;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display), var(--font-sans);
+  }
 }
+
+@layer utilities {
+  .glow-primary  { box-shadow: var(--glow-primary,  none); }
+  .glow-secondary { box-shadow: var(--glow-secondary, none); }
+  .glow-accent   { box-shadow: var(--glow-accent,   none); }
+}
+
+/* ─── Festive component overrides ─────────────────────────────────────────── */
+
+/* Button — primary variant glow */
+[data-surface="festive"] [data-slot="button"].bg-primary {
+  box-shadow: var(--glow-primary);
+}
+
+/* Card — brand-tinted ring + ambient glow (replaces neutral ring-foreground/10) */
+[data-surface="festive"] [data-slot="card"] {
+  box-shadow:
+    0 0 0 1px oklch(0.52 0.27 340 / 0.22),
+    0 4px 20px -2px oklch(0.52 0.27 340 / 0.09);
+}
+
+/* Form fields — explicit dark background (dark: variants use .dark class, not our surface attr) */
+[data-surface="festive"] [data-slot="input"],
+[data-surface="festive"] [data-slot="select-trigger"],
+[data-surface="festive"] [data-slot="textarea"] {
+  background-color: oklch(0.11 0.04 280);
+}
+
+/* ─── Status badge semantic classes ───────────────────────────────────────── */
+/* Default (clean/light) surface — mirrors the old hardcoded Tailwind colors   */
+.status-badge-draft           { background-color: oklch(0.95 0 0);       color: oklch(0.42 0 0);       }
+.status-badge-info            { background-color: oklch(0.93 0.04 250);   color: oklch(0.42 0.12 250);  }
+.status-badge-pending         { background-color: oklch(0.96 0.05 85);    color: oklch(0.50 0.13 85);   }
+.status-badge-secondary-state { background-color: oklch(0.94 0.04 305);   color: oklch(0.45 0.12 305);  }
+.status-badge-approved        { background-color: oklch(0.94 0.06 145);   color: oklch(0.42 0.13 145);  }
+.status-badge-rejected        { background-color: oklch(0.95 0.05 29);    color: oklch(0.46 0.14 29);   }
+
+/* Festive surface overrides — solid dark bg, high-L text (WCAG AA) */
+[data-surface="festive"] .status-badge-draft           { background-color: oklch(0.22 0.04 280); color: oklch(0.70 0.04 280); }
+[data-surface="festive"] .status-badge-info            { background-color: oklch(0.23 0.10 250); color: oklch(0.82 0.12 250); }
+[data-surface="festive"] .status-badge-pending         { background-color: oklch(0.25 0.10 72);  color: oklch(0.88 0.14 72);  }
+[data-surface="festive"] .status-badge-secondary-state { background-color: oklch(0.23 0.10 305); color: oklch(0.82 0.12 305); }
+[data-surface="festive"] .status-badge-approved        { background-color: oklch(0.23 0.10 145); color: oklch(0.88 0.14 145); }
+[data-surface="festive"] .status-badge-rejected        { background-color: oklch(0.25 0.12 29);  color: oklch(0.86 0.14 29);  }

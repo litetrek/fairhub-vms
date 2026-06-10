@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 20px; }
+  h2 { text-align: center; font-size: 16px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+  .subtitle { text-align: center; font-size: 11px; color: #64748b; margin-bottom: 14px; }
+  .phase-bar { display: flex; margin-bottom: 6px; border-radius: 6px; overflow: hidden; }
+  .phase { flex: 1; text-align: center; font-size: 10px; font-weight: 700; padding: 6px 4px; color: #fff; }
+  .ph1 { background: #6366f1; flex: 1.2; }
+  .ph2 { background: #0ea5e9; }
+  .ph3 { background: #10b981; }
+  .ph4 { background: #f59e0b; }
+  .ph5 { background: #ef4444; flex: 0.8; }
+  .grid {
+    display: grid;
+    grid-template-columns: 70px repeat(5, 1fr);
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .lane-label {
+    display: flex; align-items: center; justify-content: center;
+    writing-mode: vertical-rl;
+    font-size: 10px; font-weight: 700; color: #fff;
+    padding: 10px 4px; border-right: 1px solid rgba(255,255,255,0.3);
+    letter-spacing: 1px;
+  }
+  .lane-admin { background: #4f46e5; }
+  .lane-vendor { background: #0284c7; }
+  .col-header {
+    text-align: center; font-size: 9px; font-weight: 700;
+    padding: 6px 4px; color: #fff; border-right: 1px solid rgba(255,255,255,0.2);
+  }
+  .ch1 { background: #6366f1; }
+  .ch2 { background: #0ea5e9; }
+  .ch3 { background: #10b981; }
+  .ch4 { background: #f59e0b; }
+  .ch5 { background: #ef4444; }
+  .cell {
+    padding: 10px 8px;
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+    min-height: 140px;
+  }
+  .cell.shade { background: #f8fafc; }
+  .step {
+    border-radius: 5px;
+    padding: 6px 8px;
+    font-size: 10px;
+    line-height: 1.45;
+    margin-bottom: 5px;
+  }
+  .step strong { display: block; font-size: 10px; margin-bottom: 2px; }
+  .step span { font-size: 9.5px; opacity: 0.85; }
+  .step-admin  { background: #ede9fe; border-left: 3px solid #6366f1; color: #3730a3; }
+  .step-vendor { background: #e0f2fe; border-left: 3px solid #0ea5e9; color: #0c4a6e; }
+  .step-system { background: #f0fdf4; border-left: 3px solid #10b981; color: #065f46; }
+  .step-decision { background: #fef9c3; border-left: 3px solid #f59e0b; color: #78350f; }
+  .step-alert  { background: #fee2e2; border-left: 3px solid #ef4444; color: #7f1d1d; }
+  .arrow { text-align: center; font-size: 13px; color: #94a3b8; margin: 3px 0; }
+  .module-tag {
+    display: inline-block; font-size: 8px; font-weight: 700;
+    background: #1e293b; color: #fff; border-radius: 3px;
+    padding: 1px 5px; margin-bottom: 4px;
+  }
+  .empty { color: #94a3b8; font-size: 9px; text-align: center; padding-top: 40px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; justify-content: center; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 9.5px; color: #475569; }
+  .leg-dot { width: 12px; height: 12px; border-radius: 3px; }
+  .footer { text-align: center; margin-top: 10px; font-size: 9px; color: #94a3b8; }
+</style>
+</head>
+<body>
+<h2>VendorHub — Complete Vendor Workflow (v3)</h2>
+<p class="subtitle">Revised per manager feedback · June 2026</p>
+<div class="phase-bar">
+  <div class="phase ph1">PRE-EVENT SETUP</div>
+  <div class="phase ph2">DISCOVERY &amp; SIGN-UP</div>
+  <div class="phase ph3">APPLICATION &amp; REVIEW</div>
+  <div class="phase ph4">PAYMENT &amp; CONFIRMATION</div>
+  <div class="phase ph5">EVENT DAY</div>
+</div>
+<div class="grid">
+  <!-- Header row -->
+  <div style="background:#1e293b;display:flex;align-items:center;justify-content:center;border-right:1px solid #334155;">
+    <span style="font-size:8px;color:#64748b;font-weight:700;">LANE</span>
+  </div>
+  <div class="col-header ch1">1 · Pre-Event Setup</div>
+  <div class="col-header ch2">2 · Discovery &amp; Sign-up</div>
+  <div class="col-header ch3">3 · Application &amp; Review</div>
+  <div class="col-header ch4">4 · Payment &amp; Confirmation</div>
+  <div class="col-header ch5">5 · Event Day</div>
+  <!-- ADMIN lane -->
+  <div class="lane-label lane-admin">STAFF / ADMIN</div>
+  <div class="cell">
+    <div class="module-tag">M8</div>
+    <div class="step step-admin"><strong>Create Event Page</strong><span>Name, description, dates, location, hours</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-admin"><strong>Define Booth Options</strong><span>Types, sizes, available weeks, pricing, add-ons, what's included</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-admin"><strong>Set Document Requirements</strong><span>License, insurance, permit — per booth type</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-system"><strong>Publish Event Link</strong><span>System generates shareable public URL</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-admin"><strong>Send Invitations</strong><span>Share link externally (email, social, etc.)</span></div>
+  </div>
+  <div class="cell shade"><div class="empty">— no staff action —</div></div>
+  <div class="cell">
+    <div class="module-tag">M4</div>
+    <div class="step step-admin"><strong>Review Application</strong><span>Check submitted docs &amp; booth request</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-decision"><strong>Approve or Reject?</strong><span>Optional rejection note sent to vendor</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-admin"><strong>Assign Booth</strong><span>Staff picks booth # based on type &amp; availability</span></div>
+    <div class="arrow">↓</div>
+    <div class="module-tag">M5</div>
+    <div class="step step-system"><strong>Generate Invoice</strong><span>Booth fee + add-ons auto-calculated</span></div>
+  </div>
+  <div class="cell">
+    <div class="module-tag">M6</div>
+    <div class="step step-admin"><strong>Record Offline Payment</strong><span>Check/Zelle — method, amount, date, ref #</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-system"><strong>Auto-confirm Stripe</strong><span>Webhook records payment automatically</span></div>
+    <div class="arrow">↓</div>
+    <div class="module-tag">M7</div>
+    <div class="step step-system"><strong>Send Confirmation Email</strong><span>Booth #, map, receipt, event details</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-admin"><strong>Send Instructions</strong><span>Setup guide, schedule, rules, key dates</span></div>
+  </div>
+  <div class="cell">
+    <div class="module-tag">M8</div>
+    <div class="step step-admin"><strong>Mark Check-In</strong><span>Staff marks vendor present; system timestamps</span></div>
+  </div>
+  <!-- VENDOR lane -->
+  <div class="lane-label lane-vendor">VENDOR</div>
+  <div class="cell shade"><div class="empty">— awaiting invitation —</div></div>
+  <div class="cell">
+    <div class="module-tag">M1</div>
+    <div class="step step-vendor"><strong>Receive Invitation</strong><span>Click link → public Event Info Page</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Browse Event Details</strong><span>Dates, location, booth types &amp; sizes, requirements (no login needed)</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Click "Request a Booth"</strong><span>Triggers login/register wall</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Login or Register</strong><span>Email, business name, phone → verify email</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-system"><strong>Redirect to Application</strong><span>Auto-directed after authentication</span></div>
+  </div>
+  <div class="cell">
+    <div class="module-tag">M2</div>
+    <div class="step step-vendor"><strong>Select Date(s) &amp; Duration</strong><span>Pick available week(s) for the event</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Select Booth Type &amp; Size</strong><span>Pricing &amp; availability shown based on selection</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Review Invoice Summary</strong><span>Confirm total cost before proceeding</span></div>
+    <div class="arrow">↓</div>
+    <div class="module-tag">M3</div>
+    <div class="step step-vendor"><strong>Upload Documents</strong><span>Business license, insurance, permit</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Submit Application</strong><span>Enters staff review queue</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-alert"><strong>If Rejected: Edit &amp; Resubmit</strong><span>Update docs/info, resubmit — no fresh start needed</span></div>
+  </div>
+  <div class="cell">
+    <div class="module-tag">M6</div>
+    <div class="step step-vendor"><strong>Receive Invoice</strong><span>View booth assignment &amp; total due</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Pay Invoice</strong><span>Online via Stripe, or offline (check/Zelle)</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Receive Confirmation Email</strong><span>Booth #, map, receipt, event info</span></div>
+    <div class="arrow">↓</div>
+    <div class="step step-vendor"><strong>Receive Instructions</strong><span>Setup guide, schedule, rules &amp; key dates</span></div>
+  </div>
+  <div class="cell shade">
+    <div class="step step-vendor"><strong>Sign In at Event</strong><span>Physical sign-in at check-in desk</span></div>
+  </div>
+</div>
+<div class="legend">
+  <div class="leg"><div class="leg-dot" style="background:#ede9fe;border:2px solid #6366f1;"></div>Staff Action</div>
+  <div class="leg"><div class="leg-dot" style="background:#e0f2fe;border:2px solid #0ea5e9;"></div>Vendor Action</div>
+  <div class="leg"><div class="leg-dot" style="background:#f0fdf4;border:2px solid #10b981;"></div>System / Auto</div>
+  <div class="leg"><div class="leg-dot" style="background:#fef9c3;border:2px solid #f59e0b;"></div>Decision Point</div>
+  <div class="leg"><div class="leg-dot" style="background:#fee2e2;border:2px solid #ef4444;"></div>Rejection / Resubmit</div>
+</div>
+<p class="footer">
+  M1 Identity &amp; Auth · M2 Booth Application · M3 Documents · M4 Approval · M5 Booth Assignment · M6 Invoicing · M7 Communication · M8 Admin/Check-in
+</p>
+</body>
+</html>
