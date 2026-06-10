@@ -30,11 +30,11 @@
 | Module | Name | Status |
 |---|---|---|
 | M1 | Identity & Account / Registration & Email Verification | ✅ Complete |
-| M2 | Booth Application (multi-step form) | 🔲 Stage 3 |
-| M3 | Compliance & Documents (uploads) | 🔲 Stage 3 |
-| M4 | Approval Workflow (staff review, approve/reject) | 🔲 Future |
-| M5 | Booth Assignment (staff-driven) | 🔲 Future |
-| M6 | Invoicing & Payment | 🔲 Future |
+| M2 | Booth Application (multi-step form) | ✅ Complete |
+| M3 | Compliance & Documents (uploads) | ✅ Complete |
+| M4 | Approval Workflow (staff review, approve/reject) | ✅ Complete |
+| M5 | Booth Assignment (staff-driven) | ✅ Complete |
+| M6 | Invoicing & Payment | ✅ Complete (Stripe deferred) |
 | M7 | Communication | 🔲 Future |
 | M8 | Admin Dashboard / Event Check-in | 🔲 Future |
 
@@ -67,12 +67,80 @@
 - Supabase Google provider configured
 - Google Cloud OAuth 2.0 credentials created and connected
 
-### 🔲 Stage 3 — Booth Application + Document Uploads (NEXT)
-- Multi-step booth application form (`/vendor/applications/new`)
-- Document upload (business license, seller's permit, health permit, insurance)
-- Supabase Storage integration
-- Application status tracking
-- Staff queue showing submitted applications
+### ✅ Stage 3 — Booth Application & Review (COMPLETE)
+- Multi-step booth application form (week(s), booth type/size, product category)
+- Document upload via Supabase Storage (M3)
+- Vendor application status tracking; staff review queue with approve/reject
+- Staff can add an optional rejection note; rejected vendors fully re-edit & resubmit
+  (resubmit clears rejectionNote) — no fresh start
+- Schema was extended toward Pre-Event Setup pre-Stage-3 (booth types & weeks exist);
+  full Pre-Event Setup schema NOT yet confirmed complete
+
+### ✅ Stage 4 — Booth Assignment, Invoicing & Payment (COMPLETE; Stripe deferred)
+- Staff-driven booth assignment by booth type (M5), on /staff/applications/[id]
+- Invoice generation; order = approve → assign booth → generate invoice (M6)
+- Offline payment recording (method, amount, date, reference #, optional notes)
+- Invoice + payment-confirmation emails via Resend (src/lib/email.ts)
+  ⚠ Resend may not be fully wired (RESEND_API_KEY) — transactional emails may be no-oping
+- Online Stripe = PLACEHOLDER, deferred until account keys are set.
+  When built, confirmation MUST come from a Stripe webhook, not the client redirect.
+
+### ✅ Stage 4 — Navigation Fix (COMPLETE)
+- Detail [id] pages existed but list/index pages were never built → most nav links 404'd
+- Queue "All" filter was hardcoded to [SUBMITTED, UNDER_REVIEW], hiding APPROVED apps
+  → there was no UI path to assign a booth or generate an invoice
+
+### ✅ Stage 5 — Pre-Event Setup + Public Discovery (COMPLETE)
+
+#### Schema changes (pushed via `prisma db push`)
+- `Event`: added `mapEmbedUrl String?`, `updatedAt DateTime @default(now()) @updatedAt`
+- `BoothType`: added `whatsIncluded String?`
+- New model: `EventAddOn` (id, eventId, boothTypeId?, name, description?, price,
+  sortOrder, createdAt) — boothTypeId null = available for all booth types
+- `ApplicationAddOn`: FK rerouted from `boothAddOnId → eventAddOnId` (EventAddOn)
+- `BoothAddOn` (physical booth level) retained unchanged — not used in application flow
+- `Event.updatedAt` required `@default(now())` to backfill one existing row during push
+
+#### Part 1 — Pre-Event Setup (`/admin/events`)
+- 10 API routes under `/api/admin/` — full CRUD for events, booth types, add-ons,
+  weeks, and doc requirements; all with staff/admin auth guards
+- Delete guards: blocks deletes that would break existing application references
+- `/admin/layout.tsx` — mirrors staff layout with DB-based role check; "Event Setup"
+  nav link added to staff/admin navigation
+- `/admin/events` — event list with status badges, date ranges, booth type counts,
+  application counts
+- `EventForm.tsx` — shared create/edit client component with:
+  - Slug auto-suggested from event name (lowercase, spaces → hyphens)
+  - Public URL preview: `vendor.cyber-tech.com/fair/[slug]`
+  - Publish button guards against missing slug
+- `/admin/events/[id]/setup` — 4-tab setup hub:
+  - **Booth Types tab:** list with Edit/Delete, link to create/edit forms
+  - **Add-Ons tab:** list with per-booth-type or "all" availability indicator
+  - **Weeks tab:** fully inline CRUD (add/edit/delete rows)
+  - **Doc Requirements tab:** grouped by booth type, inline add/delete per group
+- Separate create/edit form pages for booth types and add-ons
+
+#### Part 2 — Public Discovery (`/fair/[slug]`)
+- Server-side render; only shows events where `status = OPEN`
+- Graceful "not available" message for unpublished or missing slugs (no crash)
+- Banner hero: `bannerImageUrl` if set, dark text hero fallback
+- Map section: renders `mapEmbedUrl` in sandboxed iframe when set
+- Booth type card grid: name, price, size, description, whatsIncluded, applicable
+  add-ons (boothTypeId match + null/all), required document list
+- Add-ons summary section with pricing
+- Application deadline callout when set
+- "Request a Booth" CTA — per booth type card + floating button:
+  - Guest → redirect to `/auth/login?redirect=/vendor/apply`
+  - Vendor (logged in) → `/vendor/applications/new`
+  - Staff/Admin → informational message only
+
+#### Bug fix (caught during Stage 5 implementation)
+- `src/lib/invoices.ts` had stale references to `boothAddOn` (renamed to `eventAddOn`
+  in the Stage 5 schema); corrected includes and all property accesses
+
+#### Convention established
+- Different booth sizes = different `BoothType` rows (Option A — no `BoothTypeWeek`
+  join table; all weeks available for all booth types)
 
 ---
 
@@ -87,12 +155,14 @@
 | Vendor check-in | Physical sign-in; staff marks present with auto timestamp (no QR codes) |
 | Staff account creation | Admin-only, not through public /auth/register |
 | Google OAuth | Vendors only; staff/admin use email/password |
+| Booth size variants | Different sizes = separate BoothType rows (no size join table) |
+| Week availability | All weeks available for all booth types (Option A — no BoothTypeWeek join table) |
+| Add-on scope | boothTypeId null = available to all booth types; set = specific type only |
 
-## Open Decisions (resolve before Stage 3)
+## Open Decisions
 
 1. Should offline payment confirmation email be auto-sent or manually triggered by staff?
-2. Should staff be able to add a rejection reason note when sending application back?
-3. Does booth assignment happen before or after invoice generation?
+2. Final font decision: Cinzel/Inter vs. Glowfest's actual brand fonts?
 
 ---
 
@@ -104,8 +174,11 @@
 | Prisma v7 requires `@prisma/adapter-pg` | Use `DATABASE_URL` port 6543 (runtime), `DIRECT_URL` port 5432 (migrations) |
 | shadcn v4 broke `asChild` Button pattern | Restored Slot pattern manually |
 | Supabase free tier SMTP rate limit (3/hour) | Disabled email confirmation during dev; re-enable when Resend configured |
-| Next.js 16 deprecates `middleware.ts` | Rename to `proxy.ts` — TODO before Stage 3 |
+| Next.js 16 deprecates `middleware.ts` | Renamed to `proxy.ts` — enforced in all prompts |
 | Project was in Box/OneDrive (sync conflicts) | Moved to `C:\Users\vince\code-projects\fairhub-vms` |
+| Prisma config/client split | `prisma.config.ts` must be `defineConfig` only; PrismaClient singleton in `src/lib/prisma.ts` |
+| `Event.updatedAt` backfill error on db push | Added `@default(now())` alongside `@updatedAt` to allow backfill of existing rows |
+| `invoices.ts` stale `boothAddOn` references | Updated to `eventAddOn` after Stage 5 schema rename |
 
 ---
 
@@ -116,10 +189,25 @@
 | Vercel | ✅ Live | Auto-deploys on GitHub push |
 | Supabase | ✅ Live | Project ID: jggxctktrpogbhktrsi, West US |
 | GitHub | ✅ Live | https://github.com/litetrek/fairhub-vms |
-| Resend | ✅ Account ready | Not yet configured in app |
+| Resend | ✅ Account ready | Not yet configured in app (RESEND_API_KEY not set) |
 | Twilio | ✅ Account ready | Not yet configured in app |
 | Stripe | ✅ Account ready | Not yet configured in app |
 | Google OAuth | ✅ Live | Reused existing Google Cloud project |
+
+---
+
+## On the Horizon
+
+### Stage 6 — QA Testing
+- Automated QA test suite covering all completed stages (planned)
+- Test coverage targets: event setup flow, application submission, staff review,
+  booth assignment, invoice generation, public discovery page, auth flows
+
+### Stage 7+ — Remaining Modules
+- **M7 Communication:** vendor messaging (email/SMS via Resend + Twilio)
+- **M8 Event Check-in:** staff marks vendor present with auto timestamp
+- **Stripe live integration:** webhook-driven payment confirmation
+  (must come from Stripe webhook, never the client redirect)
 
 ---
 
@@ -131,4 +219,19 @@
 
 ---
 
-*Last updated: Stage 2b complete — Google OAuth working*
+## ⚠ Prisma 7 — prisma.config.ts vs the client (fixed this session)
+- The Prisma CLIENT singleton (PrismaClient + @prisma/adapter-pg Pool, runtime pooled
+  connection = DATABASE_URL) lives in `src/lib/prisma.ts` with the dev hot-reload guard;
+  all app imports point there. NEVER put client instantiation in `prisma.config.ts`.
+- `prisma.config.ts` is a RESERVED Prisma 7 config file, required for db pull/push/migrate.
+  It must export `defineConfig` (NOT a PrismaClient). Correct shape:
+  - Loads env from `.env.local` (project has NO `.env`; Prisma 7 CLI doesn't auto-load env)
+  - `datasource.url = env("DIRECT_URL")` ← CLI uses this for migrations (port 5432 direct,
+    not the pooled 6543 connection)
+- Symptom if broken: "Failed to parse syntax of config file at ...prisma.config.ts"
+  on any prisma CLI command.
+
+---
+
+*Last updated: Stage 5 complete — Pre-Event Setup (admin CRUD), Public Discovery page,
+schema updated with EventAddOn + mapEmbedUrl + whatsIncluded + Event.updatedAt*
