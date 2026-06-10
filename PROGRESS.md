@@ -223,10 +223,78 @@
 
 ## On the Horizon
 
-### Stage 6 — QA Testing
-- Automated QA test suite covering all completed stages (planned)
-- Test coverage targets: event setup flow, application submission, staff review,
-  booth assignment, invoice generation, public discovery page, auth flows
+### ✅ Stage 6A — QA Framework Setup (COMPLETE)
+
+#### Test Framework
+- Vitest — unit and API route tests (no browser, fast)
+- Playwright — E2E browser tests (full user flows)
+- Two-laptop workflow established:
+  - Main laptop: app code in src/ (Claude Code)
+  - QA laptop: test code in tests/ (Claude Code)
+
+#### Packages Added (devDependencies)
+- vitest, @vitest/coverage-v8, @vitejs/plugin-react
+- vitest-mock-extended
+- @playwright/test
+
+#### Configuration Files Created
+- vitest.config.ts — unit test runner config
+- playwright.config.ts — E2E browser test config
+
+#### Test Infrastructure Created
+- tests/unit/setup.ts — global Prisma + Supabase mocks
+- tests/unit/__mocks__/prisma.ts — reusable mock data factories
+- tests/unit/__mocks__/supabase.ts — Supabase auth mock
+- 4 unit stub files ready (auth, vendor, staff, admin API)
+- 7 E2E stub files ready (all major flows)
+
+#### Tests Written and Passing
+Unit (Vitest): 10 passed, 0 failed
+  - invoices.test.ts — full generateInvoice() coverage:
+    1. Invoice number format INV-YYYY-0001
+    2. Sequence increment (0005 → 0006)
+    3. Booth line item — single week price
+    4. Booth line item — multi-week price calculation
+    5. Add-on line items — correct description and price
+    6. Total calculation — subtotal + tax = total
+    7. Zero add-ons case — base price only
+    8. Error path — application not found
+    9. Error path — invoice already exists
+    10. Error path — no booth assignment
+
+E2E (Playwright): 3 passed, 0 failed
+  - public-discovery.spec.ts:
+    1. Valid slug loads without 500, shows <h1>
+    2. Invalid slug shows graceful "not available" message
+    3. Guest CTA redirects to /auth/login
+
+#### npm Scripts Added
+- npm run test:unit — run unit tests once
+- npm run test:unit:watch — watch mode
+- npm run test:unit:coverage — with coverage report
+- npm run test:e2e — run E2E tests
+- npm run test:e2e:ui — interactive Playwright UI
+- npm run test:e2e:report — view HTML report
+- npm run test — run all tests
+
+#### Infrastructure Discovery (Fixed During Setup)
+- Found that Stages 3–5 code was never committed to GitHub
+- 91 files (8,902 lines) committed in one batch
+- Vercel production now has complete codebase
+- middleware.ts stale file found and removed from repo
+- .env.example to be added in Stage 6B
+
+#### Stage 6A — Commit History
+- e4952eb  test: Stage 6A — Vitest + Playwright setup,
+           invoices unit tests, public discovery E2E
+- 5fd8c14  feat: commit all Stage 2-5 work
+- b2c8eff  fix: remove deprecated middleware.ts
+- 4bae683  docs: expand CLAUDE.md with full project briefing
+
+### Stage 6B — API Unit Tests (NEXT)
+- Fill in unit test stubs for auth, vendor, staff, admin API routes
+- Target: ~35 additional unit tests
+- Add .env.example to repo
 
 ### Stage 7+ — Remaining Modules
 - **M7 Communication:** vendor messaging (email/SMS via Resend + Twilio)
