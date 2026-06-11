@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { PayButton } from './PayButton'
+import { PaymentBanner } from './PaymentBanner'
 
 const INVOICE_STATUS_COLORS: Record<string, string> = {
   DRAFT: 'status-badge-draft',
@@ -28,14 +30,18 @@ const METHOD_LABELS: Record<string, string> = {
   CHECK: 'Check',
   ZELLE: 'Zelle',
   CREDIT_CARD: 'Credit Card',
+  STRIPE: 'Stripe',
 }
 
 export default async function VendorInvoicePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>
+  searchParams: Promise<{ payment?: string }>
 }) {
   const { id } = await params
+  const { payment } = await searchParams
   const supabase = await createClient()
   const {
     data: { user },
@@ -76,9 +82,12 @@ export default async function VendorInvoicePage({
   const totalPaid = payments.reduce((acc, p) => acc + Number(p.amount), 0)
   const remaining = Number(invoice.total) - totalPaid
   const isPaid = invoice.status === 'PAID'
+  const canPayOnline = invoice.status === 'SENT' || invoice.status === 'PARTIALLY_PAID'
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      <PaymentBanner payment={payment} />
+
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
@@ -235,9 +244,7 @@ export default async function VendorInvoicePage({
             </span>
           </p>
         )}
-        <Button disabled title="Online payment coming soon">
-          Pay now (coming soon)
-        </Button>
+        {canPayOnline && <PayButton invoiceId={id} />}
       </div>
     </div>
   )

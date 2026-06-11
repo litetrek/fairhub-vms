@@ -34,7 +34,7 @@
 | M3 | Compliance & Documents (uploads) | ✅ Complete |
 | M4 | Approval Workflow (staff review, approve/reject) | ✅ Complete |
 | M5 | Booth Assignment (staff-driven) | ✅ Complete |
-| M6 | Invoicing & Payment | ✅ Complete (Stripe deferred) |
+| M6 | Invoicing & Payment | ✅ Complete (Stripe live — Stage 7) |
 | M7 | Communication | 🔲 Future |
 | M8 | Admin Dashboard / Event Check-in | 🔲 Future |
 
@@ -216,7 +216,7 @@
 | GitHub | ✅ Live | https://github.com/litetrek/fairhub-vms |
 | Resend | ✅ Account ready | Not yet configured in app (RESEND_API_KEY not set) |
 | Twilio | ✅ Account ready | Not yet configured in app |
-| Stripe | ✅ Account ready | Not yet configured in app |
+| Stripe | ✅ Live (test mode) | Checkout live as of Stage 7 |
 | Google OAuth | ✅ Live | Reused existing Google Cloud project |
 
 ---
@@ -341,8 +341,8 @@ behavior and require decisions/fixes before production launch:
 - Status: ⚠ Security fix needed on main laptop before production
 
 #### Known Security Fixes Required Before Production
-1. Fix 401→403 for authenticated vendor hitting staff/admin routes
-2. Add admin-only guard to /api/admin/* routes
+1. **DEV-3:** Fix 401→403 for authenticated vendor hitting staff/admin routes
+2. **DEV-4:** Add admin-only guard to /api/admin/* routes
    (currently allows STAFF role through)
 
 ### Deployment — vendor.cyber-tech.com Live (June 10, 2026)
@@ -355,7 +355,59 @@ behavior and require decisions/fixes before production launch:
 - Stripe test keys added to .env.local and Vercel
 - Site live at https://vendor.cyber-tech.com — QA smoke test passed
 - Resend: deferred (not yet configured)
-- Stripe webhook: deferred until production payment flow
+- Stripe webhook: added in Stage 7
+
+### ✅ Stage 7 — Stripe Checkout Integration (COMPLETE)
+
+#### What was built
+- `src/lib/stripe.ts` — Stripe singleton (apiVersion: `2026-05-27.dahlia`, Stripe v22)
+- `POST /api/vendor/invoices/[id]/checkout` — creates a Checkout Session; reuses open sessions; guards vendor ownership and invoice status (SENT or PARTIALLY_PAID only)
+- `POST /api/webhooks/stripe` — handles `checkout.session.completed`; creates Payment record; recalculates invoice status (SENT → PARTIALLY_PAID → PAID); idempotent (returns 200 for already-PAID invoices and unknown sessions)
+- `PayButton.tsx` — client component; POSTs to checkout API; shows loading state; inline error on failure
+- `PaymentBanner.tsx` — client component; reads `?payment=success` / `?payment=cancelled` on return from Stripe; dismissible
+- Updated `src/app/vendor/invoices/[id]/page.tsx` — "Pay online with Stripe" button shown for SENT/PARTIALLY_PAID; hidden when PAID/CANCELLED/DRAFT; banners rendered from searchParams
+
+#### Schema changes applied (prisma db push run)
+- `Invoice.stripeCheckoutSessionId String? @unique`
+- `Invoice.stripePaymentIntentId   String? @unique`
+- `PaymentMethod` enum: added `STRIPE`
+
+#### Environment variables
+| Variable | Where | Notes |
+|---|---|---|
+| `STRIPE_SECRET_KEY` | .env.local + Vercel | Already set (sk_test_…) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | .env.local + Vercel | Already set (pk_test_…) |
+| `STRIPE_WEBHOOK_SECRET` | .env.local + Vercel | **Must be added** — see setup below |
+| `NEXT_PUBLIC_APP_URL` | .env.local (http://localhost:3000) | **Must be added to Vercel** as `https://vendor.cyber-tech.com` |
+
+#### Local webhook testing
+```
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+Copy the `whsec_...` printed by the CLI and add to `.env.local`:
+```
+STRIPE_WEBHOOK_SECRET=whsec_...
+```
+Restart the dev server after updating `.env.local`.
+
+#### Production webhook setup (Stripe Dashboard)
+1. Go to Stripe Dashboard → Developers → Webhooks → Add endpoint
+2. URL: `https://vendor.cyber-tech.com/api/webhooks/stripe`
+3. Events to listen for: `checkout.session.completed`
+4. Copy the signing secret (`whsec_...`) from the Dashboard
+5. Add to Vercel environment variables as `STRIPE_WEBHOOK_SECRET`
+6. Trigger a Vercel redeploy so the variable takes effect
+
+#### Resend TODO in webhook handler
+`src/app/api/webhooks/stripe/route.ts` has a clearly-labelled TODO comment
+where the payment confirmation email call belongs. Wire it up once
+`RESEND_API_KEY` is configured.
+
+#### What was NOT built (out of scope)
+- Refund flows
+- Stripe Customer objects (customer_email is sufficient)
+- Stripe.js / Elements (Checkout is hosted)
+- Confirmation emails (Resend not yet configured)
 
 ### Stage 6C — E2E Auth Flows (NEXT)
 - Login flow (email/password vendor)
@@ -381,11 +433,10 @@ behavior and require decisions/fixes before production launch:
 - Confirm public page appears at /fair/[slug]
 - Target: ~6 E2E tests in tests/e2e/admin-setup.spec.ts
 
-### Stage 7+ — Remaining Modules
+### Stage 8+ — Remaining Modules
 - **M7 Communication:** vendor messaging (email/SMS via Resend + Twilio)
 - **M8 Event Check-in:** staff marks vendor present with auto timestamp
-- **Stripe live integration:** webhook-driven payment confirmation
-  (must come from Stripe webhook, never the client redirect)
+- **Security fixes (pre-production):** DEV-3 (401→403) and DEV-4 (admin-only guard)
 
 ---
 
@@ -411,4 +462,4 @@ behavior and require decisions/fixes before production launch:
 
 ---
 
-*Last updated: Stage 6B complete — 53 unit tests passing, deviations documented, Stage 6C E2E auth flows next*
+*Last updated: Stage 7 complete — Stripe Checkout live, webhook handler implemented*
