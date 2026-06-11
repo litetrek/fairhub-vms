@@ -56,6 +56,12 @@ export default function LoginPage() {
       return
     }
 
+    // Read from the live URL at submit time — useSearchParams() can return null
+    // during SSR hydration when the component is not wrapped in <Suspense>.
+    const params = new URLSearchParams(window.location.search)
+    const redirectPath = params.get('redirect')
+    const paymentParam = params.get('payment')
+
     if (redirectPath?.startsWith('/vendor/')) {
       const dest = paymentParam
         ? `${redirectPath}?payment=${paymentParam}`
