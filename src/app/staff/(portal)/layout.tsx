@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
 import { signOut } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
+import { ShieldCheck } from 'lucide-react'
 
 const navLinks = [
   { href: '/staff/queue', label: 'Review queue' },
@@ -23,8 +25,14 @@ export default async function StaffLayout({
 
   if (!user) redirect('/auth/login')
 
-  const role = user.user_metadata?.role
-  if (role === 'VENDOR') redirect('/vendor/dashboard')
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { role: true },
+  })
+
+  if (!dbUser || dbUser.role === 'VENDOR') redirect('/vendor/dashboard')
+
+  const isAdmin = dbUser.role === 'ADMIN'
 
   return (
     <div className="min-h-screen bg-background" data-surface="clean">
@@ -60,6 +68,15 @@ export default async function StaffLayout({
               {label}
             </Link>
           ))}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="ml-auto flex items-center gap-1.5 px-3 py-3 text-sm font-medium text-rose-600 hover:text-rose-800 border-b-2 border-transparent hover:border-rose-300 transition-colors"
+            >
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+              Admin Panel
+            </Link>
+          )}
         </div>
       </nav>
 

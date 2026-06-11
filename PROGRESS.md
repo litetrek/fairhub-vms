@@ -506,8 +506,13 @@ where the payment confirmation email would be sent.
 
 ---
 
-*Last updated: DEV-3 and DEV-4 security fixes applied. Centralized auth guards in
-`src/lib/guards.ts`: `requireStaffOrAdmin()` (401/403 correctly split) and new
-`requireAdmin()` (ADMIN-only, blocks STAFF). All /api/admin/* routes use
-`requireAdmin()`. No known security fixes remain outstanding. Next: Stage 6C E2E auth
-tests, then Stage 8 (M7 Communication).*
+### ✅ Stage 8A — Admin Panel (COMPLETE)
+- Admin dashboard `/admin`: 4 stat cards (Applications, Vendors, Payments, Events) + quick-link buttons to Event Setup and Manage Users
+- User management `/admin/users`: full user list table with inline role-change dropdown, self-role-change protection, create staff/admin form (email + password + role)
+- Admin Panel nav link in staff layout — visible only when `user.role === 'ADMIN'`, visually distinct (rose colour + shield icon)
+- New API routes:
+  - `GET  /api/admin/users`            — list all users (returns `currentUserId` for self-guard in UI)
+  - `POST /api/admin/users`            — create Supabase auth user + Prisma row (`email_confirm: true`)
+  - `PATCH /api/admin/users/[id]/role` — update role; rejects if target === current admin
+
+*Last updated: Stage 8A complete — Admin Panel with dashboard, user management, and role-conditional nav link.*
