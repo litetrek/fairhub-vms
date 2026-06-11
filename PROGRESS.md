@@ -204,6 +204,9 @@
 | Prisma config/client split | `prisma.config.ts` must be `defineConfig` only; PrismaClient singleton in `src/lib/prisma.ts` |
 | `Event.updatedAt` backfill error on db push | Added `@default(now())` alongside `@updatedAt` to allow backfill of existing rows |
 | `invoices.ts` stale `boothAddOn` references | Updated to `eventAddOn` after Stage 5 schema rename |
+| Stripe key placeholder in .env.local | Replace with real `sk_test_...` key; restart dev server |
+| Supabase session lost on Stripe redirect | Route success/cancel URLs through /auth/login with `redirect` param |
+| `useSearchParams()` requires Suspense | Wrap page default export in `<Suspense>`; extract inner client component |
 
 ---
 
@@ -358,56 +361,92 @@ behavior and require decisions/fixes before production launch:
 - Stripe webhook: added in Stage 7
 
 ### ✅ Stage 7 — Stripe Checkout Integration (COMPLETE)
+Commit: d09a565
 
-#### What was built
-- `src/lib/stripe.ts` — Stripe singleton (apiVersion: `2026-05-27.dahlia`, Stripe v22)
-- `POST /api/vendor/invoices/[id]/checkout` — creates a Checkout Session; reuses open sessions; guards vendor ownership and invoice status (SENT or PARTIALLY_PAID only)
-- `POST /api/webhooks/stripe` — handles `checkout.session.completed`; creates Payment record; recalculates invoice status (SENT → PARTIALLY_PAID → PAID); idempotent (returns 200 for already-PAID invoices and unknown sessions)
-- `PayButton.tsx` — client component; POSTs to checkout API; shows loading state; inline error on failure
-- `PaymentBanner.tsx` — client component; reads `?payment=success` / `?payment=cancelled` on return from Stripe; dismissible
-- Updated `src/app/vendor/invoices/[id]/page.tsx` — "Pay online with Stripe" button shown for SENT/PARTIALLY_PAID; hidden when PAID/CANCELLED/DRAFT; banners rendered from searchParams
+#### New files
+- `src/lib/stripe.ts` — Stripe singleton (apiVersion `2026-05-27.dahlia`, Stripe v22)
+- `src/app/api/vendor/invoices/[id]/checkout/route.ts` — creates Checkout Session;
+  reuses open sessions; guards invoice ownership and status (SENT or PARTIALLY_PAID only)
+- `src/app/api/webhooks/stripe/route.ts` — handles `checkout.session.completed`;
+  creates Payment record (method=STRIPE); recalculates invoice status; fully idempotent
+- `src/app/vendor/invoices/[id]/PayButton.tsx` — client component with loading state
+  and inline error display
+- `src/app/vendor/invoices/[id]/PaymentBanner.tsx` — dismissible green/yellow banners
+  for `payment=success` and `payment=cancelled` return params
 
-#### Schema changes applied (prisma db push run)
-- `Invoice.stripeCheckoutSessionId String? @unique`
-- `Invoice.stripePaymentIntentId   String? @unique`
-- `PaymentMethod` enum: added `STRIPE`
+#### Modified files
+- `prisma/schema.prisma` — added `stripeCheckoutSessionId String? @unique` and
+  `stripePaymentIntentId String? @unique` to Invoice model; added STRIPE to
+  PaymentMethod enum; db push + prisma generate run
+- `src/app/vendor/invoices/[id]/page.tsx` — replaced disabled placeholder button
+  with live PayButton; added PaymentBanner; added STRIPE to METHOD_LABELS display map
 
-#### Environment variables
-| Variable | Where | Notes |
-|---|---|---|
-| `STRIPE_SECRET_KEY` | .env.local + Vercel | Already set (sk_test_…) |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | .env.local + Vercel | Already set (pk_test_…) |
-| `STRIPE_WEBHOOK_SECRET` | .env.local + Vercel | **Must be added** — see setup below |
-| `NEXT_PUBLIC_APP_URL` | .env.local (http://localhost:3000) | **Must be added to Vercel** as `https://vendor.cyber-tech.com` |
+#### Environment variables added
+- `NEXT_PUBLIC_APP_URL` — set to `http://localhost:3000` in .env.local
+- `STRIPE_WEBHOOK_SECRET` — set via `stripe listen` output in .env.local
 
-#### Local webhook testing
+#### Vercel action items (pending before production go-live)
+- Add `NEXT_PUBLIC_APP_URL=https://vendor.cyber-tech.com` to Vercel env vars
+- Create webhook in Stripe Dashboard:
+  - URL: `https://vendor.cyber-tech.com/api/webhooks/stripe`
+  - Event: `checkout.session.completed` (only)
+  - Copy `whsec_...` signing secret to Vercel as `STRIPE_WEBHOOK_SECRET`
+
+#### Local test procedure
 ```
 stripe listen --forward-to localhost:3000/api/webhooks/stripe
 ```
-Copy the `whsec_...` printed by the CLI and add to `.env.local`:
-```
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
-Restart the dev server after updating `.env.local`.
+Test card: `4242 4242 4242 4242`, any future expiry, any CVC
 
-#### Production webhook setup (Stripe Dashboard)
-1. Go to Stripe Dashboard → Developers → Webhooks → Add endpoint
-2. URL: `https://vendor.cyber-tech.com/api/webhooks/stripe`
-3. Events to listen for: `checkout.session.completed`
-4. Copy the signing secret (`whsec_...`) from the Dashboard
-5. Add to Vercel environment variables as `STRIPE_WEBHOOK_SECRET`
-6. Trigger a Vercel redeploy so the variable takes effect
+#### Known limitation
+Resend email confirmation after Stripe payment not yet implemented.
+TODO comment left in `src/app/api/webhooks/stripe/route.ts` at the point
+where the payment confirmation email would be sent.
 
-#### Resend TODO in webhook handler
-`src/app/api/webhooks/stripe/route.ts` has a clearly-labelled TODO comment
-where the payment confirmation email call belongs. Wire it up once
-`RESEND_API_KEY` is configured.
+### ✅ Stage 7 — Bug Fixes (COMPLETE)
 
-#### What was NOT built (out of scope)
-- Refund flows
-- Stripe Customer objects (customer_email is sufficient)
-- Stripe.js / Elements (Checkout is hosted)
-- Confirmation emails (Resend not yet configured)
+#### Bug 1 — Stripe secret key not loaded (env var placeholder)
+- **Symptom:** "Invalid API Key provided: your_str**********_key" on first
+  Stripe Checkout attempt; client received empty response body causing
+  "Unexpected end of JSON input"
+- **Root cause:** STRIPE_SECRET_KEY in .env.local contained the placeholder
+  string from the template, not the real sk_test_... key
+- **Fix:** Updated .env.local with real Stripe test secret key; restarted dev server
+- No code changes required
+
+#### Bug 2 — Vendor session lost after Stripe Checkout redirect
+- **Symptom:** After completing Stripe payment, vendor returned to /auth/login
+  instead of their invoice page; Supabase session cookie lost during cross-origin
+  redirect (domain → stripe.com → domain)
+- **Fix:** Changed `success_url` and `cancel_url` in `checkout/route.ts` to route
+  through /auth/login with redirect and payment params:
+  ```
+  success_url: /auth/login?redirect=/vendor/invoices/[id]&payment=success
+  cancel_url:  /auth/login?redirect=/vendor/invoices/[id]&payment=cancelled
+  ```
+- Updated `auth/login/page.tsx` to read `redirect` and `payment` from
+  `useSearchParams()` and push to the redirect destination after successful
+  sign-in (when redirect starts with `/vendor/`)
+- Updated `auth/callback/route.ts` to honour `?next` and `?payment` params
+  through the Google OAuth round-trip
+
+#### Bug 3 — Post-login redirect param not honored
+- **Symptom:** After re-login, vendor landed on /vendor/dashboard instead of
+  /vendor/invoices/[id]?payment=success
+- **Root cause:** `useSearchParams()` can return null during SSR hydration when
+  not wrapped in `<Suspense>`, leaving `redirectPath` null inside the handler closure
+- **Fix:** Added `new URLSearchParams(window.location.search)` read inside
+  `handleLogin` at submit time — guaranteed accurate since the handler only
+  runs client-side after form submission
+
+#### Bug 4 — useSearchParams() Suspense boundary missing (build failure)
+- **Symptom:** Vercel build failed with "useSearchParams() should be wrapped
+  in a suspense boundary at page /auth/login"
+- **Root cause:** Next.js 15/16 cannot statically prerender a page that calls
+  `useSearchParams()` directly in the page component without a Suspense boundary
+- **Fix:** Extracted login form into `LoginContent` client component; wrapped in
+  `<Suspense fallback={<div />}>` in the default export `LoginPage`; `'use client'`
+  retained at top of file. Build now passes; `/auth/login` shows as `○ (Static)`
 
 ### Stage 6C — E2E Auth Flows (NEXT)
 - Login flow (email/password vendor)
@@ -462,4 +501,8 @@ where the payment confirmation email call belongs. Wire it up once
 
 ---
 
-*Last updated: Stage 7 complete — Stripe Checkout live, webhook handler implemented*
+*Last updated: Stage 7 complete — Stripe Checkout integration, webhook handler,
+PayButton/PaymentBanner components. Four post-Stage-7 bugs fixed (env key, session
+loss, redirect param, Suspense boundary). Two Vercel production action items pending
+(NEXT_PUBLIC_APP_URL, STRIPE_WEBHOOK_SECRET). Security fixes DEV-3 and DEV-4 from
+Stage 6B still pending before production launch.*
