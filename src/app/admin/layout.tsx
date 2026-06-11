@@ -10,9 +10,9 @@ import {
 } from 'lucide-react'
 
 const adminNav = [
-  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/admin/events', label: 'Event Setup', icon: CalendarDays },
-  { href: '/admin/users', label: 'Manage Users', icon: Users },
+  { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, adminOnly: false },
+  { href: '/admin/events', label: 'Event Setup', icon: CalendarDays, adminOnly: false },
+  { href: '/admin/users', label: 'Manage Users', icon: Users, adminOnly: true },
 ]
 
 export default async function AdminLayout({
@@ -33,6 +33,8 @@ export default async function AdminLayout({
 
   if (!dbUser || dbUser.role !== 'ADMIN') redirect('/staff/queue')
 
+  const isAdmin = dbUser.role === 'ADMIN'
+
   return (
     <div className="flex min-h-screen bg-background">
       {/* Admin Sidebar */}
@@ -44,7 +46,7 @@ export default async function AdminLayout({
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-0.5">
-          {adminNav.map(({ href, label, icon: Icon }) => (
+          {adminNav.filter(({ adminOnly }) => !adminOnly || isAdmin).map(({ href, label, icon: Icon }) => (
             <Link
               key={href}
               href={href}
