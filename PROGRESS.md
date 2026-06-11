@@ -515,4 +515,38 @@ where the payment confirmation email would be sent.
   - `POST /api/admin/users`            — create Supabase auth user + Prisma row (`email_confirm: true`)
   - `PATCH /api/admin/users/[id]/role` — update role; rejects if target === current admin
 
-*Last updated: Stage 8A complete — Admin Panel with dashboard, user management, and role-conditional nav link.*
+### ✅ Stage 8B — Event Day Check-In (Complete)
+
+#### Schema changes
+Added to `BoothAssignment`:
+  - `checkedIn     Boolean   @default(false)`
+  - `checkedInAt   DateTime?`
+  - `checkedInById String?`
+  - `checkedInBy   User?     @relation("CheckedInAssignments", ...)`
+
+Added to `User`:
+  - `checkIns  BoothAssignment[]  @relation("CheckedInAssignments")`
+
+Note: The existing unnamed `assignedBy`/`boothAssignments` relation between
+User and BoothAssignment was renamed to `"AssignedBoothAssignments"` (required
+by Prisma when two relations exist between the same two models).
+
+#### New files
+  src/app/api/staff/checkin/route.ts
+  src/app/staff/(portal)/checkin/page.tsx
+  src/app/staff/(portal)/checkin/[eventId]/page.tsx
+  src/app/staff/(portal)/checkin/[eventId]/CheckInClient.tsx
+
+#### Modified files
+  prisma/schema.prisma
+  src/app/staff/(portal)/layout.tsx
+
+#### How to access
+  /staff/checkin → event selector (auto-redirects if one active event)
+  /staff/checkin/[eventId] → main check-in screen
+
+#### Stage 9 — Next
+  M7 Communication: Resend confirmation emails + vendor instructions
+  Prerequisite: RESEND_API_KEY must be configured in Vercel env vars
+
+*Last updated: Stage 8B complete — Event Day Check-In with mobile-first UI, search/filter, and running counter.*

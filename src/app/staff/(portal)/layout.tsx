@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { signOut } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
-import { ShieldCheck } from 'lucide-react'
+import { ShieldCheck, ClipboardCheck } from 'lucide-react'
 
 const navLinks = [
   { href: '/staff/queue', label: 'Review queue' },
@@ -68,6 +68,13 @@ export default async function StaffLayout({
               {label}
             </Link>
           ))}
+          <Link
+            href="/staff/checkin"
+            className="flex items-center gap-1.5 px-3 py-3 text-sm text-slate-500 hover:text-slate-900 border-b-2 border-transparent hover:border-slate-300 transition-colors"
+          >
+            <ClipboardCheck className="h-3.5 w-3.5 shrink-0" />
+            Check-In
+          </Link>
           {isAdmin && (
             <Link
               href="/admin"

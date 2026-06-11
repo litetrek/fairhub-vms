@@ -33,7 +33,8 @@ model User {
   sentMessages     Message[]         @relation("SentMessages")
   approvalActions  ApprovalLog[]
   documentReviews  Document[]        @relation("ReviewedDocuments")
-  boothAssignments BoothAssignment[]
+  boothAssignments BoothAssignment[] @relation("AssignedBoothAssignments")
+  checkIns         BoothAssignment[] @relation("CheckedInAssignments")
   payments         Payment[]         @relation("RecordedPayments")
 }
 
@@ -328,16 +329,20 @@ model ApplicationAddOn {
 // ─── BOOTH ASSIGNMENT ────────────────────────────────────────
 
 model BoothAssignment {
-  id            String   @id @default(uuid())
-  boothId       String   @unique
-  applicationId String   @unique
+  id            String    @id @default(uuid())
+  boothId       String    @unique
+  applicationId String    @unique
   assignedById  String
-  assignedAt    DateTime @default(now())
+  assignedAt    DateTime  @default(now())
   notes         String?
+  checkedIn     Boolean   @default(false)
+  checkedInAt   DateTime?
+  checkedInById String?
 
   booth       Booth       @relation(fields: [boothId], references: [id])
   application Application @relation(fields: [applicationId], references: [id])
-  assignedBy  User        @relation(fields: [assignedById], references: [id])
+  assignedBy  User        @relation("AssignedBoothAssignments", fields: [assignedById], references: [id])
+  checkedInBy User?       @relation("CheckedInAssignments", fields: [checkedInById], references: [id])
   invoice     Invoice?
 }
 
