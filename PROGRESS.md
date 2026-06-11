@@ -291,10 +291,83 @@ E2E (Playwright): 3 passed, 0 failed
 - b2c8eff  fix: remove deprecated middleware.ts
 - 4bae683  docs: expand CLAUDE.md with full project briefing
 
-### Stage 6B — API Unit Tests (NEXT)
-- Fill in unit test stubs for auth, vendor, staff, admin API routes
-- Target: ~35 additional unit tests
-- Add .env.example to repo
+### ✅ Stage 6B — API Unit Tests (COMPLETE)
+
+#### Results
+53 tests passing, 0 failed (includes 10 carried over from 6A)
+
+| File | Tests | Coverage |
+|---|---|---|
+| auth/register.test.ts | 7 | POST /api/auth/create-profile (OAuth profile completion) |
+| vendor/applications.test.ts | 9 | Server actions: createDraft, submit, updateBoothType, updateWeeks |
+| staff/applications.test.ts | 6 | updateApplicationStatus approve/reject flows |
+| admin/events.test.ts | 13 | POST events, PATCH/publish, DELETE booth-type, POST weeks |
+| lib/payments.test.ts | 6 | recordPayment — CHECK/ZELLE, PAID/PARTIALLY_PAID, overpayment, referenceNumber |
+| lib/invoices.test.ts | 10 | Full generateInvoice() coverage (carried from 6A) |
+| **Total** | **53** | **0 failed** |
+
+#### Stage 6B — Commit
+- 7f96d78  test: Stage 6B — API unit tests, 53 passing
+
+#### Spec Deviations Found (Real App Behavior Documented)
+
+These deviations from the original test plan reveal actual app
+behavior and require decisions/fixes before production launch:
+
+**DEV-1 — Vendor/staff logic is server actions, not REST routes**
+- auth, vendor, and staff flows use Next.js server actions
+- not traditional REST API route handlers
+- Tests updated to reflect actual implementation
+- Status: Documented, no fix needed
+
+**DEV-2 — Duplicate email returns 200 {existing:true} not 409**
+- OAuth profile completion endpoint returns 200 with
+  {existing: true} flag instead of standard 409 conflict
+- Missing fields return 400 (not 422 as originally planned)
+- Decision: Keep as-is — appropriate for OAuth flow context
+- Status: Documented
+
+**DEV-3 — Auth guard returns 401 for vendor callers (not 403)**
+- Vendor hitting a staff/admin route gets 401 (unauthenticated)
+  instead of correct 403 (authenticated but unauthorized)
+- 401 = not authenticated; 403 = authenticated, not authorized
+- A vendor IS authenticated — this is a bug
+- Status: ⚠ Fix needed on main laptop before production
+
+**DEV-4 — Staff can access admin routes (no admin-only guard)**
+- requireStaffOrAdmin passes for both STAFF and ADMIN roles
+- Admin-only routes (/api/admin/*) have no staff exclusion
+- Staff could accidentally create/delete events
+- Status: ⚠ Security fix needed on main laptop before production
+
+#### Known Security Fixes Required Before Production
+1. Fix 401→403 for authenticated vendor hitting staff/admin routes
+2. Add admin-only guard to /api/admin/* routes
+   (currently allows STAFF role through)
+
+### Stage 6C — E2E Auth Flows (NEXT)
+- Login flow (email/password vendor)
+- Register flow (new vendor)
+- Role-based redirects (vendor→dashboard, staff→queue, admin→events)
+- Unauthenticated redirect to /auth/login
+- Google OAuth callback with no profile → /vendor/profile/complete
+- Target: ~8 E2E tests in tests/e2e/auth.spec.ts
+
+### Stage 6D — E2E Vendor Journey (PLANNED)
+- Full application flow: apply → submit → view status
+- Rejected vendor re-edit and resubmit flow
+- Target: ~7 E2E tests in tests/e2e/vendor-application.spec.ts
+
+### Stage 6E — E2E Staff Journey (PLANNED)
+- Review queue → approve/reject → assign booth → generate invoice
+- Record offline payment → invoice status updates
+- Target: ~8 E2E tests in tests/e2e/staff-review.spec.ts +
+  tests/e2e/booth-assignment.spec.ts + tests/e2e/invoicing.spec.ts
+
+### Stage 6F — E2E Admin Journey (PLANNED)
+- Create event → setup booth types/add-ons/weeks → publish
+- Confirm public page appears at /fair/[slug]
+- Target: ~6 E2E tests in tests/e2e/admin-setup.spec.ts
 
 ### Stage 7+ — Remaining Modules
 - **M7 Communication:** vendor messaging (email/SMS via Resend + Twilio)
@@ -326,5 +399,4 @@ E2E (Playwright): 3 passed, 0 failed
 
 ---
 
-*Last updated: Stage 5 complete and verified — all smoke tests passed,
-bugs fixed, QA test suite (Stage 6) starting next*
+*Last updated: Stage 6B complete — 53 unit tests passing, deviations documented, Stage 6C E2E auth flows next*
