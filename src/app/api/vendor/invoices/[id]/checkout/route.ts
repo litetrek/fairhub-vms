@@ -72,8 +72,8 @@ export async function POST(
     mode: 'payment',
     customer_email: invoice.vendor.user.email,
     line_items: lineItems,
-    success_url: `${baseUrl}/vendor/invoices/${invoice.id}?payment=success`,
-    cancel_url: `${baseUrl}/vendor/invoices/${invoice.id}?payment=cancelled`,
+    success_url: `${baseUrl}/auth/login?redirect=/vendor/invoices/${invoice.id}&payment=success`,
+    cancel_url: `${baseUrl}/auth/login?redirect=/vendor/invoices/${invoice.id}&payment=cancelled`,
     metadata: {
       invoiceId: invoice.id,
       vendorId: invoice.vendorId,

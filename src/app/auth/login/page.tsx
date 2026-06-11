@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -30,6 +30,9 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectPath = searchParams.get('redirect')
+  const paymentParam = searchParams.get('payment')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -53,6 +56,14 @@ export default function LoginPage() {
       return
     }
 
+    if (redirectPath?.startsWith('/vendor/')) {
+      const dest = paymentParam
+        ? `${redirectPath}?payment=${paymentParam}`
+        : redirectPath
+      router.push(dest)
+      return
+    }
+
     const role = data.user?.user_metadata?.role || 'VENDOR'
     if (role === 'VENDOR') {
       router.push('/vendor/dashboard')
@@ -66,10 +77,15 @@ export default function LoginPage() {
     setError('')
     try {
       const supabase = createClient()
+      const callbackUrl = new URL(`${window.location.origin}/auth/callback`)
+      if (redirectPath?.startsWith('/vendor/')) {
+        callbackUrl.searchParams.set('next', redirectPath)
+        if (paymentParam) callbackUrl.searchParams.set('payment', paymentParam)
+      }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: callbackUrl.toString(),
         },
       })
       if (error) {
