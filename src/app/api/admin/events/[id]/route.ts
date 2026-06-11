@@ -1,22 +1,13 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
-
-async function requireStaffOrAdmin() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return null
-  const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } })
-  if (!dbUser || dbUser.role === 'VENDOR') return null
-  return user
-}
+import { requireAdmin } from '@/lib/guards'
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await requireStaffOrAdmin()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authError = await requireAdmin()
+  if (authError) return authError
 
   const { id } = await params
   const event = await prisma.event.findUnique({ where: { id } })
@@ -28,8 +19,8 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const user = await requireStaffOrAdmin()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const authError = await requireAdmin()
+  if (authError) return authError
 
   const { id } = await params
 

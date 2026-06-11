@@ -335,18 +335,24 @@ behavior and require decisions/fixes before production launch:
   instead of correct 403 (authenticated but unauthorized)
 - 401 = not authenticated; 403 = authenticated, not authorized
 - A vendor IS authenticated — this is a bug
-- Status: ⚠ Fix needed on main laptop before production
+- Status: ✅ FIXED — `requireStaffOrAdmin()` in `src/lib/guards.ts` now
+  checks session first (401 if absent) then role (403 if VENDOR).
+  All /api/admin/* routes use the centralized guard.
 
 **DEV-4 — Staff can access admin routes (no admin-only guard)**
 - requireStaffOrAdmin passes for both STAFF and ADMIN roles
 - Admin-only routes (/api/admin/*) have no staff exclusion
 - Staff could accidentally create/delete events
-- Status: ⚠ Security fix needed on main laptop before production
+- Status: ✅ FIXED — Added `requireAdmin()` to `src/lib/guards.ts` that
+  rejects any role that is not strictly ADMIN (returns 403 for STAFF and
+  VENDOR). All 10 /api/admin/* route files now import and call
+  `requireAdmin()`. `requireStaffOrAdmin()` retained for future
+  /api/staff/* routes. No known security fixes remain outstanding.
 
 #### Known Security Fixes Required Before Production
-1. **DEV-3:** Fix 401→403 for authenticated vendor hitting staff/admin routes
-2. **DEV-4:** Add admin-only guard to /api/admin/* routes
-   (currently allows STAFF role through)
+~~DEV-3~~ ✅ Resolved  
+~~DEV-4~~ ✅ Resolved  
+No outstanding security fixes.
 
 ### Deployment — vendor.cyber-tech.com Live (June 10, 2026)
 - DNS: CNAME record added in Dynadot pointing to Vercel
@@ -475,7 +481,6 @@ where the payment confirmation email would be sent.
 ### Stage 8+ — Remaining Modules
 - **M7 Communication:** vendor messaging (email/SMS via Resend + Twilio)
 - **M8 Event Check-in:** staff marks vendor present with auto timestamp
-- **Security fixes (pre-production):** DEV-3 (401→403) and DEV-4 (admin-only guard)
 
 ---
 
@@ -501,8 +506,8 @@ where the payment confirmation email would be sent.
 
 ---
 
-*Last updated: Stage 7 complete — Stripe Checkout integration, webhook handler,
-PayButton/PaymentBanner components. Four post-Stage-7 bugs fixed (env key, session
-loss, redirect param, Suspense boundary). Two Vercel production action items pending
-(NEXT_PUBLIC_APP_URL, STRIPE_WEBHOOK_SECRET). Security fixes DEV-3 and DEV-4 from
-Stage 6B still pending before production launch.*
+*Last updated: DEV-3 and DEV-4 security fixes applied. Centralized auth guards in
+`src/lib/guards.ts`: `requireStaffOrAdmin()` (401/403 correctly split) and new
+`requireAdmin()` (ADMIN-only, blocks STAFF). All /api/admin/* routes use
+`requireAdmin()`. No known security fixes remain outstanding. Next: Stage 6C E2E auth
+tests, then Stage 8 (M7 Communication).*
