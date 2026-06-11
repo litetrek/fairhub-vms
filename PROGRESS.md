@@ -345,6 +345,18 @@ behavior and require decisions/fixes before production launch:
 2. Add admin-only guard to /api/admin/* routes
    (currently allows STAFF role through)
 
+### Deployment — vendor.cyber-tech.com Live (June 10, 2026)
+- DNS: CNAME record added in Dynadot pointing to Vercel
+- All environment variables configured in Vercel (DATABASE_URL, DIRECT_URL, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, NEXT_PUBLIC_ORG, NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY, STRIPE_SECRET_KEY)
+- Fixed: TypeScript build failure — excluded tests/ and config files from tsconfig.json
+- Fixed: Supabase URL typo in Vercel env vars (jggxctktrpogbhkttrsi)
+- Fixed: Connection string quotes removed in Vercel env vars
+- Google OAuth working end-to-end on production
+- Stripe test keys added to .env.local and Vercel
+- Site live at https://vendor.cyber-tech.com — QA smoke test passed
+- Resend: deferred (not yet configured)
+- Stripe webhook: deferred until production payment flow
+
 ### Stage 6C — E2E Auth Flows (NEXT)
 - Login flow (email/password vendor)
 - Register flow (new vendor)
