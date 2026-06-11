@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
@@ -28,7 +28,7 @@ function GoogleIcon() {
   )
 }
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectPath = searchParams.get('redirect')
@@ -56,8 +56,8 @@ export default function LoginPage() {
       return
     }
 
-    // Read from the live URL at submit time — useSearchParams() can return null
-    // during SSR hydration when the component is not wrapped in <Suspense>.
+    // Read from the live URL at submit time — belt-and-suspenders in case
+    // useSearchParams() is stale during the async sign-in await.
     const params = new URLSearchParams(window.location.search)
     const redirectPath = params.get('redirect')
     const paymentParam = params.get('payment')
@@ -207,5 +207,13 @@ export default function LoginPage() {
         </div>
       </Card>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div />}>
+      <LoginContent />
+    </Suspense>
   )
 }
