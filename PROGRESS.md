@@ -678,3 +678,84 @@ removed from approvalLogs query.
   `variant="secondary"` (solid background) on all three steps
 
 *Last updated: unified activity log on staff detail page; Back button contrast fix.*
+
+---
+
+### ✅ Stage 8D — Vendor Onboarding Wizard (COMPLETE)
+
+#### Overview
+All new vendors — both email-registered and Google OAuth — now pass through a
+structured 3-step onboarding wizard before reaching the dashboard. A profile
+completeness guard in the vendor layout prevents bypassing the wizard by
+navigating directly to `/vendor/dashboard`.
+
+#### Google Sign-In on Register Page
+- "Continue with Google" button added to `/auth/register` (identical pattern to
+  the existing Google button on `/auth/login`)
+- Divider + Google SVG icon button appears below the email/password form
+- Calls `supabase.auth.signInWithOAuth` → redirects to `/auth/callback`
+
+#### Auth Callback — Profile Completeness Check
+- `/auth/callback/route.ts` updated: after OAuth code exchange, checks whether
+  the vendor's profile has all four required fields non-empty:
+  `businessName`, `contactName`, `phone`, `description`
+- If profile is missing or incomplete → redirects to `/vendor/profile/complete?setup=true`
+- If profile is complete → `/vendor/dashboard` (unchanged)
+- Post-Stripe redirect short-circuit runs before the completeness check (no regression)
+
+#### Email Vendor Post-Signup Redirect
+- `/auth/register`: after successful `supabase.auth.signUp()`, checks `data.session`:
+  - Session present (email confirmation disabled) → `/vendor/profile/complete?setup=true`
+  - No session (email confirmation enabled) → `/auth/verify-email` (unchanged;
+    the auth callback handles routing after the vendor verifies their email)
+
+#### 3-Step Onboarding Wizard
+File: `src/app/(onboarding)/vendor/profile/complete/`
+
+**Step 1 — Business Basics** (required fields)
+- Business Name *, Contact Name *, Phone *
+- Business Type (optional), Years in Business (optional)
+- "Next →" advances to step 2
+
+**Step 2 — About Your Business** (required to submit)
+- Description * (textarea — "What will you be selling?")
+- Website (text field, auto-prepends `https://` on submit if missing)
+- Instagram, Facebook (optional)
+- "← Back" returns to step 1; "Next →" saves profile then advances to step 3
+
+**Step 3 — Photos** (optional, skippable)
+- Business Logo upload (square, PNG/JPG, max 5 MB)
+- Feature Photo upload (landscape, shows booth/products)
+- Files upload immediately on select via `POST /api/vendor/profile/upload`
+  (same API used by the profile edit page) — saved to Supabase Storage + PATCH to profile
+- "Saved ✓" confirmation appears under each slot after upload
+- "Skip for now" or "Go to Dashboard →" both redirect to `/vendor/dashboard`
+- Both buttons disabled while an upload is in progress
+
+**Step indicator:** "Step X of 3" with a 3-segment progress bar that fills as the
+vendor advances.
+
+**Non-setup mode** (`?setup` param absent): all fields shown on one page with a
+single "Save" button — used when a vendor navigates to the page manually.
+
+#### Profile Completeness Guard in Vendor Layout
+- `/vendor/layout.tsx` queries `VendorProfile` + `User.phone` on every vendor portal
+  request; if any required field is blank → redirects to `/vendor/profile/complete?setup=true`
+
+#### Route Group Fix — No More Redirect Loop
+- Original `src/app/vendor/profile/complete/` was nested under `vendor/layout.tsx`,
+  causing an infinite redirect loop (guard fires → redirects to same page → guard fires…)
+- Fix: moved to `src/app/(onboarding)/vendor/profile/complete/`; route groups with
+  `()` names don't affect the URL but sit outside the vendor layout tree
+- `/vendor/profile/complete` still works as the URL; page only inherits root `app/layout.tsx`
+
+#### Website Field UX Fix
+- Changed from `type="url"` (browser-native URL validation rejects bare domains) to
+  `type="text"` with placeholder `yoursite.com`
+- `normalizeUrl()` helper auto-prepends `https://` on submit if missing
+
+#### Commits
+- `9295eaa` feat: Google sign-in on register page, vendor onboarding wizard
+- `0f2d8b1` fix: move profile/complete to (onboarding) route group to break redirect loop
+- `fad8631` fix: accept bare domains in website field, auto-prepend https://
+- `a11372f` feat: add logo and feature photo upload as step 3 of onboarding wizard
