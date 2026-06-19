@@ -656,8 +656,12 @@ New helper: `src/lib/vendor-activity.ts`
 | STANDALONE_DOCUMENT_UPLOADED | documents POST route |
 | STANDALONE_DOCUMENT_DELETED | document delete route (standalone) |
 
-**Staff view:** "Vendor activity" card on `/staff/applications/[id]` — application-scoped
-log entries, newest first.
+**Staff view:** `/staff/applications/[id]` — single unified "Activity log" card merging
+vendor actions and staff approval actions into one chronological timeline (newest first).
+Vendor entries shown in blue labelled "Vendor"; staff entries show reviewer email.
+Applications predating the activity log get a synthetic "Application created" entry
+from `application.createdAt` so the timeline always has an anchor. `take: 10` limit
+removed from approvalLogs query.
 
 **Admin view:**
 - New page `/admin/users/[id]` — full account-level activity log for any vendor,
@@ -668,4 +672,9 @@ log entries, newest first.
 - IP is null for server actions (no `Request` object available in that context)
 - LOGOUT is not logged server-side; Supabase sign-out is client-side (TODO for future)
 
-*Last updated: Stage 8C complete — vendor self-service, document reuse, UX refactor, activity logging.*
+#### Bug fixes (same session)
+- Back button invisible on dark festive surface in application wizard steps (Booth Type,
+  Documents, Review) — changed from `variant="outline"` (transparent) to
+  `variant="secondary"` (solid background) on all three steps
+
+*Last updated: unified activity log on staff detail page; Back button contrast fix.*
