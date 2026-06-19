@@ -49,14 +49,14 @@ export async function POST(request: Request) {
 
   const bytes = await file.arrayBuffer()
   const { error: uploadError } = await adminClient.storage
-    .from('vendor-documents')
+    .from('vendor-media')
     .upload(path, bytes, { contentType: file.type, upsert: true })
 
   if (uploadError) {
     return NextResponse.json({ error: uploadError.message }, { status: 500 })
   }
 
-  const { data: urlData } = adminClient.storage.from('vendor-documents').getPublicUrl(path)
+  const { data: urlData } = adminClient.storage.from('vendor-media').getPublicUrl(path)
 
   return NextResponse.json({ url: urlData.publicUrl })
 }
