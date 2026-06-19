@@ -10,6 +10,7 @@ const navLinks = [
   { href: '/staff/queue', label: 'Review queue' },
   { href: '/staff/booths', label: 'Booth map' },
   { href: '/staff/invoices', label: 'Invoices' },
+  { href: '/staff/vendors', label: 'Vendors' },
   { href: '/admin/events', label: 'Event setup' },
 ]
 

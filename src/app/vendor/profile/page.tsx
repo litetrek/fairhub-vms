@@ -17,11 +17,9 @@ export default async function VendorProfilePage() {
 
   const profile = await prisma.vendorProfile.findUnique({
     where: { userId: user.id },
-    select: { businessName: true, contactName: true },
   })
   if (!profile) redirect('/auth/login')
 
-  // Check all three places Supabase may record the Google provider
   const identityProviders = (user.identities ?? []).map((id) => id.provider)
   const metaProviders = (user.app_metadata?.providers as string[] | undefined) ?? []
   const isGoogleUser =
@@ -34,6 +32,20 @@ export default async function VendorProfilePage() {
       initialBusinessName={profile.businessName}
       initialContactName={profile.contactName}
       initialPhone={dbUser?.phone ?? ''}
+      initialBusinessType={profile.businessType ?? ''}
+      initialAddress={profile.address ?? ''}
+      initialCity={profile.city ?? ''}
+      initialState={profile.state ?? ''}
+      initialZip={profile.zip ?? ''}
+      initialWebsite={profile.website ?? ''}
+      initialDescription={profile.description ?? ''}
+      initialLogoUrl={profile.logoUrl ?? null}
+      initialBannerImageUrl={profile.bannerImageUrl ?? null}
+      initialInstagramUrl={profile.instagramUrl ?? ''}
+      initialFacebookUrl={profile.facebookUrl ?? ''}
+      initialTiktokUrl={profile.tiktokUrl ?? ''}
+      initialYearsInBusiness={profile.yearsInBusiness ?? null}
+      initialTaxId={profile.taxId ?? ''}
       email={user.email ?? ''}
       isGoogleUser={isGoogleUser}
     />

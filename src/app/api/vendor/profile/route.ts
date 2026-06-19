@@ -19,7 +19,6 @@ export async function GET() {
 
   const profile = await prisma.vendorProfile.findUnique({
     where: { userId: user.id },
-    select: { businessName: true, contactName: true },
   })
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
 
@@ -28,6 +27,20 @@ export async function GET() {
     contactName: profile.contactName,
     phone: dbUser.phone ?? '',
     email: user.email,
+    businessType: profile.businessType ?? '',
+    address: profile.address ?? '',
+    city: profile.city ?? '',
+    state: profile.state ?? '',
+    zip: profile.zip ?? '',
+    website: profile.website ?? '',
+    description: profile.description ?? '',
+    logoUrl: profile.logoUrl ?? null,
+    bannerImageUrl: profile.bannerImageUrl ?? null,
+    instagramUrl: profile.instagramUrl ?? '',
+    facebookUrl: profile.facebookUrl ?? '',
+    tiktokUrl: profile.tiktokUrl ?? '',
+    yearsInBusiness: profile.yearsInBusiness ?? null,
+    taxId: profile.taxId ?? '',
   })
 }
 
@@ -47,8 +60,27 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json()
-  const { businessName, contactName, phone } = body
+  const {
+    businessName,
+    contactName,
+    phone,
+    businessType,
+    address,
+    city,
+    state,
+    zip,
+    website,
+    description,
+    instagramUrl,
+    facebookUrl,
+    tiktokUrl,
+    yearsInBusiness,
+    taxId,
+    logoUrl,
+    bannerImageUrl,
+  } = body
 
+  // Required fields — must be non-empty strings if present
   if (businessName !== undefined && (typeof businessName !== 'string' || !businessName.trim())) {
     return NextResponse.json({ error: 'Business name must be a non-empty string' }, { status: 400 })
   }
@@ -59,21 +91,40 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: 'Phone must be a non-empty string' }, { status: 400 })
   }
 
-  const profileData: Record<string, string> = {}
-  if (businessName) profileData.businessName = businessName.trim()
-  if (contactName) profileData.contactName = contactName.trim()
+  // yearsInBusiness must be a non-negative number if provided
+  if (
+    yearsInBusiness !== undefined &&
+    yearsInBusiness !== null &&
+    (typeof yearsInBusiness !== 'number' || yearsInBusiness < 0 || yearsInBusiness > 100)
+  ) {
+    return NextResponse.json({ error: 'Years in business must be a number between 0 and 100' }, { status: 400 })
+  }
+
+  // Build profile update object
+  const profileData: Record<string, unknown> = { profileUpdatedAt: new Date() }
+  if (businessName !== undefined) profileData.businessName = businessName.trim()
+  if (contactName !== undefined) profileData.contactName = contactName.trim()
+  if (businessType !== undefined) profileData.businessType = businessType?.trim() || null
+  if (address !== undefined) profileData.address = address?.trim() || null
+  if (city !== undefined) profileData.city = city?.trim() || null
+  if (state !== undefined) profileData.state = state?.trim() || null
+  if (zip !== undefined) profileData.zip = zip?.trim() || null
+  if (website !== undefined) profileData.website = website?.trim() || null
+  if (description !== undefined) profileData.description = description?.trim() || null
+  if (instagramUrl !== undefined) profileData.instagramUrl = instagramUrl?.trim() || null
+  if (facebookUrl !== undefined) profileData.facebookUrl = facebookUrl?.trim() || null
+  if (tiktokUrl !== undefined) profileData.tiktokUrl = tiktokUrl?.trim() || null
+  if (yearsInBusiness !== undefined) profileData.yearsInBusiness = yearsInBusiness
+  if (taxId !== undefined) profileData.taxId = taxId?.trim() || null
+  if (logoUrl !== undefined) profileData.logoUrl = logoUrl || null
+  if (bannerImageUrl !== undefined) profileData.bannerImageUrl = bannerImageUrl || null
 
   const [updatedProfile] = await Promise.all([
-    Object.keys(profileData).length > 0
-      ? prisma.vendorProfile.update({ where: { userId: user.id }, data: profileData })
-      : prisma.vendorProfile.findUnique({ where: { userId: user.id } }),
+    prisma.vendorProfile.update({ where: { userId: user.id }, data: profileData }),
     phone !== undefined
       ? prisma.user.update({ where: { id: user.id }, data: { phone: phone.trim() } })
       : Promise.resolve(),
   ])
 
-  return NextResponse.json({
-    businessName: updatedProfile?.businessName,
-    contactName: updatedProfile?.contactName,
-  })
+  return NextResponse.json(updatedProfile)
 }

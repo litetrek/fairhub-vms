@@ -198,6 +198,12 @@ export default async function StaffApplicationDetailPage({
             <div>
               <p className="font-medium text-slate-900">{application.vendor.contactName}</p>
               <p className="text-slate-500">{application.vendor.businessName}</p>
+              <Link
+                href={`/staff/vendors/${application.vendor.id}`}
+                className="text-xs text-blue-500 hover:underline"
+              >
+                View vendor profile →
+              </Link>
             </div>
             <div className="text-xs text-slate-500 space-y-0.5">
               <p>{application.vendor.user.email}</p>

@@ -20,7 +20,11 @@
       "Bash(node -e \"require\\('dotenv'\\)\")",
       "Bash(git checkout *)",
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\vince\\\\code-projects\\\\fairhub-vms\" -Force)",
-      "Bash(Select-Object Name, Mode)"
+      "Bash(Select-Object Name, Mode)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\vince\\\\code-projects\\\\fairhub-vms\\\\src\\\\app\\\\api\\\\vendor\\\\invoices\\\\[id]\\\\checkout\" 2>&1; mkdir -p \"c:\\\\Users\\\\vince\\\\code-projects\\\\fairhub-vms\\\\src\\\\app\\\\api\\\\webhooks\\\\stripe\" 2>&1; echo \"done\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\vince\\code-projects\\fairhub-vms\\src\\app\\api\\vendor\\invoices\\[id]"
     ]
   }
 }

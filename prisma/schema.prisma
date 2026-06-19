@@ -45,18 +45,26 @@ enum Role {
 }
 
 model VendorProfile {
-  id           String   @id @default(uuid())
-  userId       String   @unique
-  businessName String
-  contactName  String
-  businessType String?
-  address      String?
-  city         String?
-  state        String?
-  zip          String?
-  website      String?
-  description  String?
-  createdAt    DateTime @default(now())
+  id               String    @id @default(uuid())
+  userId           String    @unique
+  businessName     String
+  contactName      String
+  businessType     String?
+  address          String?
+  city             String?
+  state            String?
+  zip              String?
+  website          String?
+  description      String?
+  logoUrl          String?
+  bannerImageUrl   String?
+  instagramUrl     String?
+  facebookUrl      String?
+  tiktokUrl        String?
+  yearsInBusiness  Int?
+  taxId            String?
+  profileUpdatedAt DateTime?
+  createdAt        DateTime  @default(now())
 
   user          User                @relation(fields: [userId], references: [id])
   applications  Application[]
