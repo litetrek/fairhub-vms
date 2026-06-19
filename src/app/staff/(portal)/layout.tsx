@@ -36,29 +36,31 @@ export default async function StaffLayout({
 
   return (
     <div className="min-h-screen bg-background" data-surface="clean">
-      <header className="bg-white border-b border-slate-200 px-6 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="font-medium text-slate-900">VendorHub</span>
-          <span className="text-slate-300">|</span>
-          <span className="text-sm text-slate-500">Staff Portal</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-600">{user.email}</span>
-          <form action={signOut}>
-            <Button
-              variant="ghost"
-              size="sm"
-              type="submit"
-              className="text-slate-500 text-xs"
-            >
-              Sign out
-            </Button>
-          </form>
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-slate-900">VendorHub</span>
+            <span className="text-slate-300">|</span>
+            <span className="text-sm text-slate-500">Staff Portal</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-600">{user.email}</span>
+            <form action={signOut}>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="submit"
+                className="text-slate-500 text-xs"
+              >
+                Sign out
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 
-      <nav className="bg-white border-b border-slate-100 px-6">
-        <div className="flex gap-1">
+      <nav className="bg-white border-b border-slate-100">
+        <div className="max-w-6xl mx-auto px-6 flex gap-1">
           {navLinks.map(({ href, label }) => (
             <Link
               key={href}
