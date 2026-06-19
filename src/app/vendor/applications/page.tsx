@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import ApplicationActions from '@/components/vendor/ApplicationActions'
+import { ChevronRight } from 'lucide-react'
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'status-badge-draft',
@@ -42,7 +42,6 @@ export default async function VendorApplicationsPage() {
           event: true,
           boothType: true,
           weeks: { include: { eventWeek: true } },
-          invoice: { select: { status: true } },
         },
       },
     },
@@ -79,57 +78,41 @@ export default async function VendorApplicationsPage() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {apps.map((app) => {
-                const canEdit = app.status === 'DRAFT' || app.status === 'REJECTED'
-                const href = canEdit
-                  ? `/vendor/applications/${app.id}/edit`
-                  : `/vendor/applications/${app.id}`
-                const linkLabel =
-                  app.status === 'DRAFT'
-                    ? 'Continue'
-                    : app.status === 'REJECTED'
-                      ? 'Edit & resubmit'
-                      : 'View'
-
-                return (
-                  <div key={app.id} className="py-4 flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {app.boothType?.name ?? 'Booth type not selected'}
-                        {app.weeks.length > 0 &&
-                          ` · ${app.weeks.length} week${app.weeks.length !== 1 ? 's' : ''}`}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {app.event.name}
-                        {app.submittedAt
-                          ? ` · Submitted ${new Date(app.submittedAt).toLocaleDateString()}`
-                          : ' · Not yet submitted'}
-                      </p>
-                      {app.status === 'REJECTED' && (
-                        <p className="text-xs text-destructive mt-0.5">Changes requested by staff</p>
-                      )}
-                      {app.status === 'WITHDRAWN' && (
-                        <p className="text-xs text-muted-foreground mt-0.5">You have withdrawn this application</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[app.status] ?? 'status-badge-draft'}`}
-                      >
-                        {STATUS_LABELS[app.status] ?? app.status}
-                      </span>
-                      <Button variant="outline" size="sm" className="text-xs h-7" asChild>
-                        <Link href={href}>{linkLabel}</Link>
-                      </Button>
-                      <ApplicationActions
-                        applicationId={app.id}
-                        status={app.status}
-                        invoiceStatus={app.invoice?.status ?? null}
-                      />
-                    </div>
+              {apps.map((app) => (
+                <Link
+                  key={app.id}
+                  href={`/vendor/applications/${app.id}`}
+                  className="flex items-center justify-between gap-4 py-4 px-2 -mx-2 rounded-lg hover:bg-muted/40 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground">
+                      {app.boothType?.name ?? 'Booth type not selected'}
+                      {app.weeks.length > 0 &&
+                        ` · ${app.weeks.length} week${app.weeks.length !== 1 ? 's' : ''}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {app.event.name}
+                      {app.submittedAt
+                        ? ` · Submitted ${new Date(app.submittedAt).toLocaleDateString()}`
+                        : ' · Not yet submitted'}
+                    </p>
+                    {app.status === 'REJECTED' && (
+                      <p className="text-xs text-destructive mt-0.5">Changes requested by staff</p>
+                    )}
+                    {app.status === 'WITHDRAWN' && (
+                      <p className="text-xs text-muted-foreground mt-0.5">You have withdrawn this application</p>
+                    )}
                   </div>
-                )
-              })}
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[app.status] ?? 'status-badge-draft'}`}
+                    >
+                      {STATUS_LABELS[app.status] ?? app.status}
+                    </span>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
         </CardContent>

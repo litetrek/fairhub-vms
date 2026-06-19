@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
@@ -18,34 +19,28 @@ type Props = {
   invoiceStatus?: string | null
 }
 
-function getAction(status: string, invoiceStatus?: string | null): 'delete' | 'withdraw' | null {
-  if (status === 'DRAFT') return 'delete'
-  if (['SUBMITTED', 'UNDER_REVIEW', 'CONDITIONALLY_APPROVED'].includes(status)) return 'withdraw'
-  if (status === 'APPROVED') {
-    const paid = ['PAID', 'PARTIALLY_PAID'].includes(invoiceStatus ?? '')
-    return paid ? null : 'withdraw'
-  }
-  return null
-}
-
 export default function ApplicationActions({ applicationId, status, invoiceStatus }: Props) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [dialogAction, setDialogAction] = useState<'delete' | 'withdraw'>('delete')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const action = getAction(status, invoiceStatus)
-  if (!action) return null
+  function openDialog(action: 'delete' | 'withdraw') {
+    setDialogAction(action)
+    setError(null)
+    setDialogOpen(true)
+  }
 
   async function handleConfirm() {
     setLoading(true)
     setError(null)
     try {
       const url =
-        action === 'delete'
+        dialogAction === 'delete'
           ? `/api/vendor/applications/${applicationId}`
           : `/api/vendor/applications/${applicationId}/withdraw`
-      const method = action === 'delete' ? 'DELETE' : 'PATCH'
+      const method = dialogAction === 'delete' ? 'DELETE' : 'PATCH'
       const res = await fetch(url, { method })
 
       if (!res.ok) {
@@ -55,8 +50,8 @@ export default function ApplicationActions({ applicationId, status, invoiceStatu
         return
       }
 
-      setOpen(false)
-      if (action === 'delete') {
+      setDialogOpen(false)
+      if (dialogAction === 'delete') {
         router.push('/vendor/applications')
       } else {
         router.refresh()
@@ -67,55 +62,99 @@ export default function ApplicationActions({ applicationId, status, invoiceStatu
     }
   }
 
-  return (
-    <>
-      {action === 'delete' ? (
-        <Button
-          variant="destructive"
-          size="sm"
-          className="text-xs h-7"
-          onClick={() => { setError(null); setOpen(true) }}
-        >
-          Delete
-        </Button>
-      ) : (
+  const canWithdraw =
+    ['SUBMITTED', 'UNDER_REVIEW', 'CONDITIONALLY_APPROVED'].includes(status) ||
+    (status === 'APPROVED' && !['PAID', 'PARTIALLY_PAID'].includes(invoiceStatus ?? ''))
+
+  if (status === 'DRAFT') {
+    return (
+      <>
+        <div className="flex items-center gap-2">
+          <Button variant="default" size="sm" asChild>
+            <Link href={`/vendor/applications/${applicationId}/edit`}>Continue</Link>
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => openDialog('delete')}
+          >
+            Delete
+          </Button>
+        </div>
+        <ConfirmDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          action={dialogAction}
+          loading={loading}
+          error={error}
+          onConfirm={handleConfirm}
+        />
+      </>
+    )
+  }
+
+  if (canWithdraw) {
+    return (
+      <>
         <Button
           variant="outline"
           size="sm"
-          className="text-xs h-7"
-          onClick={() => { setError(null); setOpen(true) }}
+          onClick={() => openDialog('withdraw')}
         >
           Withdraw
         </Button>
-      )}
+        <ConfirmDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          action={dialogAction}
+          loading={loading}
+          error={error}
+          onConfirm={handleConfirm}
+        />
+      </>
+    )
+  }
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent showCloseButton={false}>
-          <DialogHeader>
-            <DialogTitle>
-              {action === 'delete' ? 'Delete draft application?' : 'Withdraw application?'}
-            </DialogTitle>
-            <DialogDescription>
-              {action === 'delete'
-                ? 'Are you sure you want to delete this draft? This cannot be undone.'
-                : 'Are you sure you want to withdraw this application? Your booth spot will be released. This cannot be undone.'}
-            </DialogDescription>
-          </DialogHeader>
-          {error && <p className="text-xs text-destructive px-1">{error}</p>}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
-              Cancel
-            </Button>
-            <Button
-              variant={action === 'delete' ? 'destructive' : 'default'}
-              onClick={handleConfirm}
-              disabled={loading}
-            >
-              {loading ? '…' : action === 'delete' ? 'Delete' : 'Withdraw'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+  return null
+}
+
+type ConfirmDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  action: 'delete' | 'withdraw'
+  loading: boolean
+  error: string | null
+  onConfirm: () => void
+}
+
+function ConfirmDialog({ open, onOpenChange, action, loading, error, onConfirm }: ConfirmDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>
+            {action === 'delete' ? 'Delete draft application?' : 'Withdraw application?'}
+          </DialogTitle>
+          <DialogDescription>
+            {action === 'delete'
+              ? 'Are you sure you want to delete this draft? This cannot be undone.'
+              : 'Are you sure you want to withdraw this application? Your booth spot will be released. This cannot be undone.'}
+          </DialogDescription>
+        </DialogHeader>
+        {error && <p className="text-xs text-destructive px-1">{error}</p>}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancel
+          </Button>
+          <Button
+            variant={action === 'delete' ? 'destructive' : 'default'}
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? '…' : action === 'delete' ? 'Delete' : 'Withdraw'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -91,6 +91,15 @@ export default async function VendorApplicationViewPage({
     redirect(`/vendor/applications/${id}/edit`)
   }
 
+  const documentsWithUrls = await Promise.all(
+    application.documents.map(async (doc) => {
+      const { data } = await supabase.storage
+        .from('vendor-documents')
+        .createSignedUrl(doc.fileUrl, 3600)
+      return { ...doc, signedUrl: data?.signedUrl ?? null }
+    })
+  )
+
   const { assignment, invoice } = application
   const booth = assignment?.booth
 
@@ -221,21 +230,28 @@ export default async function VendorApplicationViewPage({
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-medium">
-            Documents ({application.documents.length})
+            Documents ({documentsWithUrls.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {application.documents.length === 0 ? (
+          {documentsWithUrls.length === 0 ? (
             <p className="text-xs text-muted-foreground">No documents uploaded</p>
           ) : (
             <div className="divide-y divide-border">
-              {application.documents.map((doc) => (
+              {documentsWithUrls.map((doc) => (
                 <div key={doc.id} className="py-3 flex items-center justify-between">
                   <div>
                     <p className="text-sm text-foreground">
                       {DOC_LABELS[doc.docType] ?? doc.docType}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{doc.fileName}</p>
+                    <a
+                      href={doc.signedUrl ?? '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline mt-0.5 block"
+                    >
+                      {doc.fileName}
+                    </a>
                   </div>
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full ${
