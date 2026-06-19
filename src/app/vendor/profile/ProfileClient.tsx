@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Camera } from 'lucide-react'
 
+const MAX_GALLERY = 6
+
 type Props = {
   initialBusinessName: string
   initialContactName: string
@@ -21,6 +23,7 @@ type Props = {
   initialDescription: string
   initialLogoUrl: string | null
   initialBannerImageUrl: string | null
+  initialGalleryImages: string[]
   initialInstagramUrl: string
   initialFacebookUrl: string
   initialTiktokUrl: string
@@ -43,6 +46,7 @@ export default function ProfileClient({
   initialDescription,
   initialLogoUrl,
   initialBannerImageUrl,
+  initialGalleryImages,
   initialInstagramUrl,
   initialFacebookUrl,
   initialTiktokUrl,
@@ -54,12 +58,16 @@ export default function ProfileClient({
   // Images
   const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl)
   const [bannerImageUrl, setBannerImageUrl] = useState<string | null>(initialBannerImageUrl)
+  const [galleryImages, setGalleryImages] = useState<string[]>(initialGalleryImages)
   const [logoUploading, setLogoUploading] = useState(false)
   const [bannerUploading, setBannerUploading] = useState(false)
+  const [galleryUploading, setGalleryUploading] = useState(false)
   const [logoError, setLogoError] = useState<string | null>(null)
   const [bannerError, setBannerError] = useState<string | null>(null)
+  const [galleryError, setGalleryError] = useState<string | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   // Business Info
   const [businessName, setBusinessName] = useState(initialBusinessName)
@@ -139,6 +147,44 @@ export default function ProfileClient({
       setError(err instanceof Error ? err.message : 'Upload failed')
     } finally {
       setUploading(false)
+    }
+  }
+
+  async function handleGalleryAdd(file: File) {
+    if (galleryImages.length >= MAX_GALLERY) return
+    setGalleryUploading(true)
+    setGalleryError(null)
+    try {
+      const url = await uploadImage(file, 'gallery')
+      const updated = [...galleryImages, url]
+      setGalleryImages(updated)
+      const res = await fetch('/api/vendor/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ galleryImages: updated }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setGalleryError(data.error ?? 'Failed to save')
+      }
+    } catch (err) {
+      setGalleryError(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setGalleryUploading(false)
+    }
+  }
+
+  async function handleGalleryRemove(urlToRemove: string) {
+    const updated = galleryImages.filter((u) => u !== urlToRemove)
+    setGalleryImages(updated)
+    try {
+      await fetch('/api/vendor/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ galleryImages: updated }),
+      })
+    } catch {
+      // non-critical; local state already updated
     }
   }
 
@@ -272,77 +318,132 @@ export default function ProfileClient({
       </div>
 
       {/* Section 1 — Brand Images */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* Logo */}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">Business Logo</p>
-          <p className="text-xs text-muted-foreground">Recommended: square, PNG/JPG, max 5MB</p>
-          <button
-            type="button"
-            onClick={() => logoInputRef.current?.click()}
-            disabled={logoUploading}
-            className="relative w-full h-40 rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden bg-muted/30 flex items-center justify-center"
-          >
-            {logoUploading ? (
-              <span className="text-sm text-muted-foreground">Uploading…</span>
-            ) : logoUrl ? (
-              <img src={logoUrl} alt="Logo" className="w-full h-full object-cover" />
-            ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Camera className="w-8 h-8" />
-                <span className="text-xs">Click to upload logo</span>
-              </div>
-            )}
-          </button>
-          {logoError && <p className="text-xs text-destructive">{logoError}</p>}
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleImageSelect('logo', file)
-              e.target.value = ''
-            }}
-          />
-        </div>
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Photos &amp; Media</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
 
-        {/* Banner */}
-        <div className="space-y-2">
-          <p className="text-sm font-medium text-foreground">Feature Photo</p>
-          <p className="text-xs text-muted-foreground">Recommended: landscape, shows your booth/products</p>
-          <button
-            type="button"
-            onClick={() => bannerInputRef.current?.click()}
-            disabled={bannerUploading}
-            className="relative w-full h-40 rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden bg-muted/30 flex items-center justify-center"
-          >
-            {bannerUploading ? (
-              <span className="text-sm text-muted-foreground">Uploading…</span>
-            ) : bannerImageUrl ? (
-              <img src={bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
+          {/* Logo + Feature Photo row */}
+          <div className="flex gap-4 items-start">
+
+            {/* Logo — square, object-contain */}
+            <div className="space-y-1.5 shrink-0">
+              <p className="text-sm font-medium text-foreground">Business Logo</p>
+              <p className="text-xs text-muted-foreground">Square, PNG/JPG, max 5MB</p>
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                disabled={logoUploading}
+                className="relative w-36 h-36 rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden bg-white/5 flex items-center justify-center"
+              >
+                {logoUploading ? (
+                  <span className="text-xs text-muted-foreground">Uploading…</span>
+                ) : logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="w-full h-full object-contain p-1" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Camera className="w-7 h-7" />
+                    <span className="text-xs text-center leading-tight px-2">Click to upload logo</span>
+                  </div>
+                )}
+              </button>
+              {logoError && <p className="text-xs text-destructive">{logoError}</p>}
+              <input ref={logoInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageSelect('logo', f); e.target.value = '' }} />
+            </div>
+
+            {/* Feature Photo — landscape, object-cover */}
+            <div className="space-y-1.5 flex-1">
+              <p className="text-sm font-medium text-foreground">Feature Photo</p>
+              <p className="text-xs text-muted-foreground">Landscape — shows your booth or products</p>
+              <button
+                type="button"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={bannerUploading}
+                className="relative w-full h-36 rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors overflow-hidden bg-muted/30 flex items-center justify-center"
+              >
+                {bannerUploading ? (
+                  <span className="text-sm text-muted-foreground">Uploading…</span>
+                ) : bannerImageUrl ? (
+                  <img src={bannerImageUrl} alt="Feature photo" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Camera className="w-7 h-7" />
+                    <span className="text-xs">Click to upload feature photo</span>
+                  </div>
+                )}
+              </button>
+              {bannerError && <p className="text-xs text-destructive">{bannerError}</p>}
+              <input ref={bannerInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageSelect('banner', f); e.target.value = '' }} />
+            </div>
+          </div>
+
+          {/* Gallery */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-foreground">Product Photos</p>
+                <p className="text-xs text-muted-foreground">Up to {MAX_GALLERY} photos of your products or past booths</p>
+              </div>
+              {galleryImages.length < MAX_GALLERY && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={galleryUploading}
+                  onClick={() => galleryInputRef.current?.click()}
+                >
+                  {galleryUploading ? 'Uploading…' : '+ Add photo'}
+                </Button>
+              )}
+            </div>
+            <input ref={galleryInputRef} type="file" accept="image/*" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleGalleryAdd(f); e.target.value = '' }} />
+            {galleryError && <p className="text-xs text-destructive">{galleryError}</p>}
+
+            {galleryImages.length === 0 ? (
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                disabled={galleryUploading}
+                className="w-full h-24 rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors flex items-center justify-center gap-2 text-muted-foreground"
+              >
+                <Camera className="w-5 h-5" />
+                <span className="text-sm">Add your first product photo</span>
+              </button>
             ) : (
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <Camera className="w-8 h-8" />
-                <span className="text-xs">Click to upload photo</span>
+              <div className="grid grid-cols-3 gap-2">
+                {galleryImages.map((url, i) => (
+                  <div key={url} className="relative group aspect-square rounded-lg overflow-hidden border border-border bg-muted/20">
+                    <img src={url} alt={`Product photo ${i + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleGalleryRemove(url)}
+                      className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                {galleryImages.length < MAX_GALLERY && (
+                  <button
+                    type="button"
+                    onClick={() => galleryInputRef.current?.click()}
+                    disabled={galleryUploading}
+                    className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-primary transition-colors flex flex-col items-center justify-center gap-1 text-muted-foreground"
+                  >
+                    <Camera className="w-5 h-5" />
+                    <span className="text-xs">{galleryUploading ? '…' : 'Add'}</span>
+                  </button>
+                )}
               </div>
             )}
-          </button>
-          {bannerError && <p className="text-xs text-destructive">{bannerError}</p>}
-          <input
-            ref={bannerInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) handleImageSelect('banner', file)
-              e.target.value = ''
-            }}
-          />
-        </div>
-      </div>
+          </div>
+
+        </CardContent>
+      </Card>
 
       {/* Section 2 — Business Information */}
       <Card>

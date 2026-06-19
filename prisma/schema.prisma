@@ -58,6 +58,7 @@ model VendorProfile {
   description      String?
   logoUrl          String?
   bannerImageUrl   String?
+  galleryImages    String[] @default([])
   instagramUrl     String?
   facebookUrl      String?
   tiktokUrl        String?

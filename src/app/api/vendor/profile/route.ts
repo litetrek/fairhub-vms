@@ -78,6 +78,7 @@ export async function PATCH(request: Request) {
     taxId,
     logoUrl,
     bannerImageUrl,
+    galleryImages,
   } = body
 
   // Required fields — must be non-empty strings if present
@@ -118,6 +119,9 @@ export async function PATCH(request: Request) {
   if (taxId !== undefined) profileData.taxId = taxId?.trim() || null
   if (logoUrl !== undefined) profileData.logoUrl = logoUrl || null
   if (bannerImageUrl !== undefined) profileData.bannerImageUrl = bannerImageUrl || null
+  if (galleryImages !== undefined && Array.isArray(galleryImages)) {
+    profileData.galleryImages = galleryImages.filter((u: unknown) => typeof u === 'string' && u.trim())
+  }
 
   const [updatedProfile] = await Promise.all([
     prisma.vendorProfile.update({ where: { userId: user.id }, data: profileData }),

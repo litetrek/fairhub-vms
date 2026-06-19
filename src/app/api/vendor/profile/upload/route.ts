@@ -29,8 +29,8 @@ export async function POST(request: Request) {
   const type = formData.get('type') as string | null
 
   if (!file) return NextResponse.json({ error: 'No file provided' }, { status: 400 })
-  if (type !== 'logo' && type !== 'banner') {
-    return NextResponse.json({ error: 'Type must be "logo" or "banner"' }, { status: 400 })
+  if (type !== 'logo' && type !== 'banner' && type !== 'gallery') {
+    return NextResponse.json({ error: 'Type must be "logo", "banner", or "gallery"' }, { status: 400 })
   }
   if (!file.type.startsWith('image/')) {
     return NextResponse.json({ error: 'File must be an image' }, { status: 400 })

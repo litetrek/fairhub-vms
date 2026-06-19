@@ -41,6 +41,7 @@ export default async function VendorProfilePage() {
       initialDescription={profile.description ?? ''}
       initialLogoUrl={profile.logoUrl ?? null}
       initialBannerImageUrl={profile.bannerImageUrl ?? null}
+      initialGalleryImages={profile.galleryImages ?? []}
       initialInstagramUrl={profile.instagramUrl ?? ''}
       initialFacebookUrl={profile.facebookUrl ?? ''}
       initialTiktokUrl={profile.tiktokUrl ?? ''}
