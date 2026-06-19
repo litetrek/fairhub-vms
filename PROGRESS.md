@@ -549,116 +549,123 @@ by Prisma when two relations exist between the same two models).
   M7 Communication: Resend confirmation emails + vendor instructions
   Prerequisite: RESEND_API_KEY must be configured in Vercel env vars
 
-#### Stage 8B Addendum — Document Reuse for New Applications
-
-Vendors can now reuse documents from prior applications when submitting a new one,
-skipping re-upload entirely.
-
-##### New API routes
-  `GET  /api/vendor/documents/previous` — returns all documents for the current
-    vendor grouped by docType; most recent first; only docs from other applications
-  `POST /api/vendor/documents/reuse` — copies an existing Document row onto the
-    current application (same file URL, new applicationId, status=PENDING);
-    replaces any existing row of the same docType on the target application
-
-##### Modified files
-  `src/app/vendor/applications/new/steps/StepDocuments.tsx`
-    - Fetches previous docs on mount; renders "Previously uploaded" panel above
-      the upload button for each docType when prior uploads exist
-    - "Reuse" button calls the reuse API and marks the docType as uploaded
-    - Uploading a new file clears any active reuse selection for that docType
-    - Empty state (no prior applications) renders nothing — no UI change for
-      first-time vendors
-
 ---
 
-### Feature: Vendor Self-Service — Application Withdrawal/Deletion + Document Management
+### ✅ Stage 8C — Vendor Self-Service + Document Reuse + Activity Logging (COMPLETE)
 
-#### Schema change
-- `WITHDRAWN` added to `ApplicationStatus` enum (`prisma db push` run)
+#### Feature 1 — Document Reuse
 
-#### Application withdrawal / deletion
-Business rules enforced server-side:
-- `DRAFT` → vendor can permanently delete (child records cascade-deleted)
+Vendors can reuse previously uploaded documents when starting a new application,
+skipping re-upload entirely. Documents are scoped per doc type with labels and
+signed-URL preview before reusing.
+
+New API routes:
+- `GET  /api/vendor/documents/previous` — all vendor documents grouped by docType,
+  most recent first, excluding docs already on the current application
+- `POST /api/vendor/documents/reuse` — copies an existing Document row onto the
+  current application (same file URL, new applicationId, status=PENDING);
+  replaces any existing row of the same docType on the target application
+
+Modified: `src/app/vendor/applications/new/steps/StepDocuments.tsx`
+- "Previously uploaded" panel above the upload button for each docType when prior
+  docs exist, with doc type label and signed-URL preview link
+- "Reuse" button calls the reuse API and marks the docType as uploaded
+- Uploading a new file clears the active reuse selection for that docType
+- First-time vendors see no change (panel hidden when no prior docs)
+
+#### Feature 2 — Vendor Self-Service (Withdrawal, Deletion, Document Management)
+
+**Schema change:** `WITHDRAWN` added to `ApplicationStatus` enum (`prisma db push` run)
+
+**Application withdrawal / deletion** — business rules enforced server-side:
+- `DRAFT` → vendor can permanently delete (child records cascade-deleted first)
 - `SUBMITTED` / `UNDER_REVIEW` / `CONDITIONALLY_APPROVED` → vendor can withdraw
 - `APPROVED` → withdraw allowed only if invoice not yet PAID or PARTIALLY_PAID
 - `APPROVED` + invoice paid → API returns 400; no UI button shown
 - `WITHDRAWN` / `REJECTED` → no action available
 
 New API routes:
-- `DELETE /api/vendor/applications/[id]` — deletes DRAFT + all child records
+- `DELETE /api/vendor/applications/[id]` — deletes DRAFT application + all child records
 - `PATCH  /api/vendor/applications/[id]/withdraw` — sets status to WITHDRAWN
 
 New component: `src/components/vendor/ApplicationActions.tsx` (client)
-- Renders Delete (red) or Withdraw (outline) button based on status + invoice status
-- Confirmation Dialog before any destructive action
+- Renders Delete (red) or Withdraw (outline) button based on status + invoice state
+- Confirmation dialog before any destructive action
 - Delete → redirects to /vendor/applications; Withdraw → router.refresh()
 
 Updated pages:
-- `/vendor/applications` — WITHDRAWN badge, ApplicationActions per row, invoice status included in query
-- `/vendor/applications/[id]` — WITHDRAWN in status maps, ApplicationActions in header; WITHDRAWN shows read-only detail (not redirected to edit)
+- `/vendor/applications` — WITHDRAWN status badge; ApplicationActions rendered per row;
+  invoice status included in query so button logic works
+- `/vendor/applications/[id]` — ApplicationActions in header; WITHDRAWN shows
+  read-only detail view (no redirect to edit)
 
-#### My Documents page enhancements
-- Filenames are clickable signed URLs (1hr expiry) — vendor can preview documents
-- Trash icon per row — vendor can delete docs not attached to live applications;
-  also removes file from Supabase Storage
-- New "Upload a document" panel at top — vendor selects doc type + file,
-  uploads standalone (applicationId = null); appears in reuse list for future applications
+**My Documents page enhancements:**
+- Filenames are clickable signed URLs (1-hour expiry) — vendor can preview documents
+- Trash icon per row — deletes doc record + removes file from Supabase Storage;
+  blocked if doc is attached to a live (submitted/approved) application
+- New "Upload a document" panel — vendor picks doc type + file, uploads standalone
+  (applicationId = null); immediately available in the reuse panel for future applications
 
 New API routes:
-- `POST   /api/vendor/documents`        — creates standalone Document record
-- `DELETE /api/vendor/documents/[id]`   — deletes doc DB record + storage file
+- `POST   /api/vendor/documents`      — creates standalone Document record
+- `DELETE /api/vendor/documents/[id]` — deletes DB record + Supabase Storage file
 
 New component: `src/app/vendor/documents/DocumentsClient.tsx` (client)
 - Manages local doc state (optimistic delete)
-- Upload form with browser Supabase client for storage
+- Upload form uses browser Supabase client for storage, then calls POST API
 - `src/app/vendor/documents/page.tsx` converted to thin server component —
-  fetches + generates signed URLs, passes serialized data to DocumentsClient
+  fetches docs + generates signed URLs, passes serialized data to DocumentsClient
 
-*Last updated: Vendor self-service — withdraw/delete applications, document preview/delete/upload.*
+#### Feature 3 — UX Refactor: Application List + Detail Consolidation
 
----
+- `/vendor/applications` — table rows are now fully clickable (navigate to detail page);
+  per-row action buttons removed; cleaner layout
+- `/vendor/applications/[id]` — all actions (Withdraw, Delete, Edit, Resubmit) consolidated
+  on the detail page where vendor has full context before deciding
 
-### Feature: Vendor Activity Logging
+#### Feature 4 — Vendor Activity Logging
 
-All vendor-initiated portal actions are now logged to a `VendorActivityLog` table
-with timestamp, action type, optional detail string, application context, and IP address.
+All vendor-initiated portal actions logged to a new `VendorActivityLog` table with
+timestamp, action type, optional detail string, application context, and IP address.
 
-#### Schema changes
+**Schema changes:**
 - New model `VendorActivityLog` (id, vendorId, applicationId?, action, detail?, ipAddress?, createdAt)
-- Back-relation `activityLogs VendorActivityLog[]` added to `VendorProfile`
-- Back-relation `activityLogs VendorActivityLog[]` added to `Application`
-- `prisma db push` + `prisma generate` run
+- `application` relation uses `onDelete: SetNull` — when an application is deleted,
+  log entries are preserved as account-level records (applicationId nullified by Postgres)
+- Back-relations added to `VendorProfile` and `Application`
+- `prisma db push` + `prisma generate` run (SetNull is Prisma's default for nullable FK fields;
+  the annotation makes it explicit)
 
-#### New helper
-- `src/lib/vendor-activity.ts` — `logVendorActivity()` + `getIpFromRequest()`
-  Wrapped in try/catch so a log failure never breaks the main request.
+New helper: `src/lib/vendor-activity.ts`
+- `logVendorActivity()` — wrapped in try/catch; a log failure never breaks the main request
+- `getIpFromRequest()` — reads `x-forwarded-for` / `x-real-ip` headers; returns null for server actions
 
-#### Actions logged
+**11 actions logged across 8 call sites:**
+
 | Action | Where |
 |---|---|
-| LOGIN | `src/app/auth/callback/route.ts` (OAuth); `src/app/auth/actions.ts` (email/password) |
-| APPLICATION_CREATED | `src/lib/applications.ts` `createDraftApplication()` |
-| APPLICATION_SUBMITTED | `src/lib/applications.ts` `submitApplication()` (DRAFT → SUBMITTED) |
-| APPLICATION_RESUBMITTED | `src/lib/applications.ts` `submitApplication()` (REJECTED → SUBMITTED) |
-| APPLICATION_WITHDRAWN | `src/app/api/vendor/applications/[id]/withdraw/route.ts` |
-| APPLICATION_DELETED | `src/app/api/vendor/applications/[id]/route.ts` (DELETE) |
-| DOCUMENT_UPLOADED | `src/lib/applications.ts` `createDocumentRecord()` |
-| DOCUMENT_REUSED | `src/app/api/vendor/documents/reuse/route.ts` |
-| DOCUMENT_DELETED | `src/app/api/vendor/documents/[id]/route.ts` (application-scoped doc) |
-| STANDALONE_DOCUMENT_UPLOADED | `src/app/api/vendor/documents/route.ts` |
-| STANDALONE_DOCUMENT_DELETED | `src/app/api/vendor/documents/[id]/route.ts` (standalone doc) |
+| LOGIN | auth/callback (OAuth) + auth/actions.ts (email/password) |
+| APPLICATION_CREATED | `createDraftApplication()` in applications.ts |
+| APPLICATION_SUBMITTED | `submitApplication()` when previous status was DRAFT |
+| APPLICATION_RESUBMITTED | `submitApplication()` when previous status was REJECTED |
+| APPLICATION_WITHDRAWN | withdraw route |
+| APPLICATION_DELETED | delete route (written with applicationId=null after app is gone) |
+| DOCUMENT_UPLOADED | `createDocumentRecord()` in applications.ts |
+| DOCUMENT_REUSED | reuse route |
+| DOCUMENT_DELETED | document delete route (application-scoped) |
+| STANDALONE_DOCUMENT_UPLOADED | documents POST route |
+| STANDALONE_DOCUMENT_DELETED | document delete route (standalone) |
 
-#### Staff view
-- `src/app/staff/(portal)/applications/[id]/page.tsx` — new "Vendor activity" card
-  shows all application-scoped log entries, newest first.
+**Staff view:** "Vendor activity" card on `/staff/applications/[id]` — application-scoped
+log entries, newest first.
 
-#### Admin view
-- `src/app/admin/users/[id]/page.tsx` — new page: full activity log for any vendor
-  (all entries including account-level), with IP address and app reference.
-- `src/app/admin/users/page.tsx` — "Activity" column added; VENDOR rows link to detail page.
+**Admin view:**
+- New page `/admin/users/[id]` — full account-level activity log for any vendor,
+  including IP address and truncated application ID reference
+- `/admin/users` — "Activity" column added; VENDOR rows link to the detail page
 
-#### Notes
-- Application delete also deletes its activity log rows (cascade via `deleteMany` before `delete`)
-- IP logging is null for server actions (no `Request` object available)
-- LOGOUT is not logged server-side (Supabase sign-out is client-side); TODO left for future
+**Notes:**
+- IP is null for server actions (no `Request` object available in that context)
+- LOGOUT is not logged server-side; Supabase sign-out is client-side (TODO for future)
+
+*Last updated: Stage 8C complete — vendor self-service, document reuse, UX refactor, activity logging.*
