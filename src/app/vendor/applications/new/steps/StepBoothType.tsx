@@ -105,7 +105,7 @@ export default function StepBoothType({
       )}
 
       <div className="flex justify-between pt-2">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="secondary" onClick={onBack}>
           Back
         </Button>
         <Button onClick={() => selected && onNext(selected)} disabled={!selected || isLoading}>

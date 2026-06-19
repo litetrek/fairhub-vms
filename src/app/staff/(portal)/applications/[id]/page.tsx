@@ -95,7 +95,6 @@ export default async function StaffApplicationDetailPage({
       approvalLogs: {
         include: { reviewedBy: true },
         orderBy: { actionedAt: 'desc' },
-        take: 10,
       },
       assignment: { include: { booth: true } },
       invoice: {
@@ -106,11 +105,56 @@ export default async function StaffApplicationDetailPage({
 
   if (!application) notFound()
 
-  const activityLogs = await prisma.vendorActivityLog.findMany({
+  const vendorLogs = await prisma.vendorActivityLog.findMany({
     where: { applicationId: id },
     orderBy: { createdAt: 'desc' },
     select: { id: true, action: true, detail: true, createdAt: true },
   })
+
+  // Merge vendor actions + staff approval actions into one timeline
+  type TimelineEntry = {
+    id: string
+    who: string
+    whoType: 'vendor' | 'staff'
+    label: string
+    detail: string | null
+    at: Date
+  }
+
+  const vendorEntries: TimelineEntry[] = vendorLogs.map((log) => ({
+    id: `v-${log.id}`,
+    who: 'Vendor',
+    whoType: 'vendor',
+    label: ACTION_LABELS[log.action] ?? log.action,
+    detail: log.detail,
+    at: log.createdAt,
+  }))
+
+  const staffEntries: TimelineEntry[] = application.approvalLogs.map((log) => ({
+    id: `s-${log.id}`,
+    who: log.reviewedBy.email,
+    whoType: 'staff',
+    label: log.action.replace(/_/g, ' ').toLowerCase(),
+    detail: log.notes ?? null,
+    at: log.actionedAt,
+  }))
+
+  // Synthetic creation entry for apps predating the activity log
+  const hasCreatedEntry = vendorEntries.some((e) => e.label === 'Application created')
+  const creationEntry: TimelineEntry = {
+    id: 'creation',
+    who: 'Vendor',
+    whoType: 'vendor',
+    label: 'Application created',
+    detail: null,
+    at: application.createdAt,
+  }
+
+  const timeline: TimelineEntry[] = [
+    ...vendorEntries,
+    ...staffEntries,
+    ...(hasCreatedEntry ? [] : [creationEntry]),
+  ].sort((a, b) => b.at.getTime() - a.at.getTime())
 
   const total = application.boothType
     ? Number(application.boothType.basePrice) * application.weeks.length
@@ -255,61 +299,39 @@ export default async function StaffApplicationDetailPage({
         </CardContent>
       </Card>
 
-      {/* Approval log */}
-      {application.approvalLogs.length > 0 && (
-        <Card className="border-slate-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Activity log</CardTitle>
-          </CardHeader>
-          <CardContent>
+      {/* Unified activity log */}
+      <Card className="border-slate-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Activity log</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {timeline.length === 0 ? (
+            <p className="text-xs text-slate-400">No activity recorded.</p>
+          ) : (
             <div className="divide-y divide-slate-100">
-              {application.approvalLogs.map((log) => (
-                <div key={log.id} className="py-2.5">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium">{log.reviewedBy.email}</span>
+              {timeline.map((entry) => (
+                <div key={entry.id} className="py-2.5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="text-sm text-slate-700 min-w-0">
+                      <span className={`font-medium ${entry.whoType === 'vendor' ? 'text-blue-600' : 'text-slate-700'}`}>
+                        {entry.whoType === 'vendor' ? 'Vendor' : entry.who}
+                      </span>
                       {' — '}
-                      {log.action.replace(/_/g, ' ').toLowerCase()}
+                      {entry.label}
+                      {entry.detail && (
+                        <span className="text-slate-400 ml-1">({entry.detail})</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 shrink-0">
+                      {entry.at.toLocaleString()}
                     </p>
-                    <p className="text-xs text-slate-400">{formatDate(log.actionedAt)}</p>
                   </div>
-                  {log.notes && (
-                    <p className="text-xs text-slate-500 mt-0.5">{log.notes}</p>
-                  )}
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Vendor activity log */}
-      {activityLogs.length > 0 && (
-        <Card className="border-slate-200">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Vendor activity</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="divide-y divide-slate-100">
-              {activityLogs.map((log) => (
-                <div key={log.id} className="py-2 flex justify-between text-sm">
-                  <div>
-                    <span className="font-medium text-slate-700">
-                      {ACTION_LABELS[log.action] ?? log.action}
-                    </span>
-                    {log.detail && (
-                      <span className="text-slate-400 ml-2">— {log.detail}</span>
-                    )}
-                  </div>
-                  <span className="text-slate-400 text-xs shrink-0 ml-4">
-                    {new Date(log.createdAt).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
       {/* Booth assignment — visible for APPROVED status */}
       {application.status === 'APPROVED' && (

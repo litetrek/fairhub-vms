@@ -251,7 +251,7 @@ export default function StepDocuments({
       </div>
 
       <div className="flex justify-between pt-2">
-        <Button variant="outline" onClick={onBack}>
+        <Button variant="secondary" onClick={onBack}>
           Back
         </Button>
         <Button onClick={() => onNext(uploadedDocTypes)} disabled={!allRequiredUploaded}>
