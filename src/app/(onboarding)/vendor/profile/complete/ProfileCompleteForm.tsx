@@ -37,6 +37,13 @@ interface Props {
   initialData: InitialData
 }
 
+function normalizeUrl(value: string): string {
+  const v = value.trim()
+  if (!v) return v
+  if (/^https?:\/\//i.test(v)) return v
+  return `https://${v}`
+}
+
 export default function ProfileCompleteForm({
   userId,
   email,
@@ -97,7 +104,7 @@ export default function ProfileCompleteForm({
           businessType: businessType || undefined,
           yearsInBusiness: yearsInBusiness !== '' ? Number(yearsInBusiness) : undefined,
           description,
-          website: website || undefined,
+          website: website ? normalizeUrl(website) : undefined,
           instagramUrl: instagramUrl || undefined,
           facebookUrl: facebookUrl || undefined,
         }),
@@ -213,8 +220,8 @@ export default function ProfileCompleteForm({
                 <Label htmlFor="website">Website</Label>
                 <Input
                   id="website"
-                  type="url"
-                  placeholder="https://yoursite.com"
+                  type="text"
+                  placeholder="yoursite.com"
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                 />
@@ -377,8 +384,8 @@ export default function ProfileCompleteForm({
                 <Label htmlFor="s2-website">Website</Label>
                 <Input
                   id="s2-website"
-                  type="url"
-                  placeholder="https://yoursite.com"
+                  type="text"
+                  placeholder="yoursite.com"
                   value={website}
                   onChange={(e) => setWebsite(e.target.value)}
                 />
