@@ -24,14 +24,16 @@ const statusLabels: Record<string, string> = {
   DRAFT: 'Draft',
 }
 
-const FILTERABLE_STATUSES = [
+const ALL_STAFF_STATUSES = [
   'SUBMITTED',
   'UNDER_REVIEW',
   'CONDITIONALLY_APPROVED',
   'APPROVED',
   'REJECTED',
-  'DRAFT',
-]
+  'WITHDRAWN',
+] as const
+
+const FILTERABLE_STATUSES = [...ALL_STAFF_STATUSES]
 
 export default async function StaffQueuePage({
   searchParams,
@@ -47,9 +49,9 @@ export default async function StaffQueuePage({
   const { status: filterStatus } = await searchParams
 
   const statusFilter =
-    filterStatus && FILTERABLE_STATUSES.includes(filterStatus)
+    filterStatus && FILTERABLE_STATUSES.includes(filterStatus as never)
       ? { status: filterStatus as never }
-      : {}
+      : { status: { in: ALL_STAFF_STATUSES as unknown as never[] } }
 
   const [applications, stats] = await Promise.all([
     prisma.application.findMany({
@@ -90,7 +92,9 @@ export default async function StaffQueuePage({
     },
     {
       label: 'Total applications',
-      value: Object.values(countByStatus).reduce((a, b) => a + b, 0),
+      value: Object.entries(countByStatus)
+        .filter(([s]) => s !== 'DRAFT')
+        .reduce((a, [, b]) => a + b, 0),
       color: 'text-slate-900',
     },
   ]

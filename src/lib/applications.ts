@@ -61,6 +61,29 @@ export async function updateApplicationWeeks(
   }
 }
 
+export async function updateApplicationDetails(
+  applicationId: string,
+  data: { productDescription?: string; productCategory?: string }
+): Promise<{ error?: string }> {
+  try {
+    const vendor = await getAuthenticatedVendorProfile()
+    const app = await prisma.application.findFirst({
+      where: { id: applicationId, vendorId: vendor.id },
+    })
+    if (!app) return { error: 'Application not found' }
+    await prisma.application.update({
+      where: { id: applicationId },
+      data: {
+        productDescription: data.productDescription?.trim() || null,
+        productCategory: data.productCategory?.trim() || null,
+      },
+    })
+    return {}
+  } catch (e) {
+    return { error: String(e) }
+  }
+}
+
 export async function updateApplicationBoothType(
   applicationId: string,
   boothTypeId: string

@@ -3,13 +3,19 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import type { BoothType } from '../ApplicationWizard'
 
 type Props = {
   boothTypes: BoothType[]
   selectedWeeksCount: number
   selectedBoothType: BoothType | null
-  onNext: (boothType: BoothType) => void
+  initialProductDescription: string
+  initialProductCategory: string
+  profileDescriptionSet: boolean
+  onNext: (boothType: BoothType, productDescription: string, productCategory: string) => void
   onBack: () => void
   isLoading: boolean
 }
@@ -27,11 +33,16 @@ export default function StepBoothType({
   boothTypes,
   selectedWeeksCount,
   selectedBoothType: initialSelected,
+  initialProductDescription,
+  initialProductCategory,
+  profileDescriptionSet,
   onNext,
   onBack,
   isLoading,
 }: Props) {
   const [selected, setSelected] = useState<BoothType | null>(initialSelected)
+  const [productDescription, setProductDescription] = useState(initialProductDescription)
+  const [productCategory, setProductCategory] = useState(initialProductCategory)
 
   const total = selected ? selected.basePrice * selectedWeeksCount : null
 
@@ -104,11 +115,42 @@ export default function StepBoothType({
         </Card>
       )}
 
+      {/* Product details */}
+      <div className="space-y-4 pt-1">
+        <div className="space-y-1.5">
+          <Label htmlFor="productDescription">What will you be selling at this event?</Label>
+          <Textarea
+            id="productDescription"
+            rows={3}
+            placeholder="Describe your products or offerings for this event"
+            value={productDescription}
+            onChange={(e) => setProductDescription(e.target.value)}
+          />
+          {profileDescriptionSet && (
+            <p className="text-xs text-muted-foreground">
+              Pre-filled from your profile — feel free to customize for this event
+            </p>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="productCategory">Product category</Label>
+          <Input
+            id="productCategory"
+            placeholder="e.g. Food, Crafts, Jewelry, Clothing"
+            value={productCategory}
+            onChange={(e) => setProductCategory(e.target.value)}
+          />
+        </div>
+      </div>
+
       <div className="flex justify-between pt-2">
         <Button variant="secondary" onClick={onBack}>
           Back
         </Button>
-        <Button onClick={() => selected && onNext(selected)} disabled={!selected || isLoading}>
+        <Button
+          onClick={() => selected && onNext(selected, productDescription, productCategory)}
+          disabled={!selected || isLoading}
+        >
           {isLoading ? 'Saving…' : 'Next'}
         </Button>
       </div>

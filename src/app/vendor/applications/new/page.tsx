@@ -84,6 +84,8 @@ export default async function NewApplicationPage({
     <ApplicationWizard
       event={serializedEvent}
       vendorProfileId={vendorProfile.id}
+      profileDescription={vendorProfile.description ?? ''}
+      profileBusinessType={vendorProfile.businessType ?? ''}
     />
   )
 }

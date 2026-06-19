@@ -59,8 +59,31 @@ export default async function VendorDashboardPage() {
     return acc + Number(app.invoice.total)
   }, 0)
 
+  const unpaidInvoices = vendorProfile.applications
+    .filter(
+      (app) =>
+        app.status === 'APPROVED' &&
+        app.invoice &&
+        app.invoice.status !== 'PAID' &&
+        app.invoice.status !== 'CANCELLED'
+    )
+    .map((app) => app.invoice!)
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {unpaidInvoices.length > 0 && (
+        <div className="border-l-4 border-amber-500 bg-amber-500/10 rounded-r-lg px-4 py-3 flex items-center justify-between gap-4">
+          <p className="text-sm text-foreground">
+            You have {unpaidInvoices.length === 1 ? 'an unpaid invoice' : `${unpaidInvoices.length} unpaid invoices`} — pay now to secure your booth.
+          </p>
+          <Button size="sm" asChild className="shrink-0">
+            <Link href={unpaidInvoices.length === 1 ? `/vendor/invoices/${unpaidInvoices[0].id}` : '/vendor/invoices'}>
+              Pay now
+            </Link>
+          </Button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-medium text-foreground">
@@ -88,12 +111,24 @@ export default async function VendorDashboardPage() {
             <p className="text-2xl font-medium text-foreground">{totalDocs}</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <p className="text-xs text-muted-foreground mb-1">Amount due</p>
-            <p className="text-2xl font-medium text-foreground">${amountDue.toFixed(2)}</p>
-          </CardContent>
-        </Card>
+        {amountDue > 0 ? (
+          <Link href="/vendor/invoices" className="block group">
+            <Card className="transition-colors group-hover:border-primary/50">
+              <CardContent className="pt-5">
+                <p className="text-xs text-muted-foreground mb-1">Amount due</p>
+                <p className="text-2xl font-medium text-foreground">${amountDue.toFixed(2)}</p>
+                <p className="text-xs text-primary mt-1">Pay now →</p>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-xs text-muted-foreground mb-1">Amount due</p>
+              <p className="text-2xl font-medium text-foreground">${amountDue.toFixed(2)}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       <Card>

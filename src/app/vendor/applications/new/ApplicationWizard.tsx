@@ -11,6 +11,7 @@ import {
   createDraftApplication,
   updateApplicationWeeks,
   updateApplicationBoothType,
+  updateApplicationDetails,
   submitApplication,
 } from '@/lib/applications'
 
@@ -56,11 +57,13 @@ export type EventData = {
 type Props = {
   event: EventData
   vendorProfileId: string
+  profileDescription: string
+  profileBusinessType: string
 }
 
 const STEP_LABELS = ['Event & Weeks', 'Booth Type', 'Documents', 'Review']
 
-export default function ApplicationWizard({ event, vendorProfileId }: Props) {
+export default function ApplicationWizard({ event, vendorProfileId, profileDescription, profileBusinessType }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
   const [isLoading, setIsLoading] = useState(false)
@@ -68,6 +71,8 @@ export default function ApplicationWizard({ event, vendorProfileId }: Props) {
   const [selectedWeekIds, setSelectedWeekIds] = useState<string[]>([])
   const [selectedBoothType, setSelectedBoothType] = useState<BoothType | null>(null)
   const [uploadedDocTypes, setUploadedDocTypes] = useState<string[]>([])
+  const [productDescription, setProductDescription] = useState(profileDescription)
+  const [productCategory, setProductCategory] = useState(profileBusinessType)
 
   async function handleWeeksNext(weekIds: string[]) {
     if (weekIds.length === 0) {
@@ -94,13 +99,19 @@ export default function ApplicationWizard({ event, vendorProfileId }: Props) {
     }
   }
 
-  async function handleBoothTypeNext(boothType: BoothType) {
+  async function handleBoothTypeNext(boothType: BoothType, desc: string, cat: string) {
     if (!applicationId) return
     setIsLoading(true)
     try {
-      const result = await updateApplicationBoothType(applicationId, boothType.id)
-      if (result.error) throw new Error(result.error)
+      const [btResult, detailResult] = await Promise.all([
+        updateApplicationBoothType(applicationId, boothType.id),
+        updateApplicationDetails(applicationId, { productDescription: desc, productCategory: cat }),
+      ])
+      if (btResult.error) throw new Error(btResult.error)
+      if (detailResult.error) throw new Error(detailResult.error)
       setSelectedBoothType(boothType)
+      setProductDescription(desc)
+      setProductCategory(cat)
       setStep(3)
     } catch (e) {
       toast.error(String(e))
@@ -182,6 +193,9 @@ export default function ApplicationWizard({ event, vendorProfileId }: Props) {
           boothTypes={event.boothTypes}
           selectedWeeksCount={selectedWeekIds.length}
           selectedBoothType={selectedBoothType}
+          initialProductDescription={productDescription}
+          initialProductCategory={productCategory}
+          profileDescriptionSet={!!profileDescription}
           onNext={handleBoothTypeNext}
           onBack={() => setStep(1)}
           isLoading={isLoading}
