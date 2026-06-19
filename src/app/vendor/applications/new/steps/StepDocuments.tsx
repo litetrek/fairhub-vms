@@ -1,11 +1,21 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { uploadDocument } from '@/lib/storage'
 import { createDocumentRecord } from '@/lib/applications'
 import type { DocRequirement } from '../ApplicationWizard'
+
+interface PreviousDoc {
+  id: string
+  fileName: string
+  fileUrl: string
+  uploadedAt: string
+  applicationId: string | null
+  docType: string
+  status: string
+}
 
 type Props = {
   docRequirements: DocRequirement[]
@@ -41,6 +51,17 @@ export default function StepDocuments({
     Object.fromEntries(docRequirements.map((dr) => [dr.docType, { status: 'idle' }]))
   )
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const [previousDocs, setPreviousDocs] = useState<Record<string, PreviousDoc[]>>({})
+  const [reusingDocType, setReusingDocType] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    fetch('/api/vendor/documents/previous')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data && typeof data === 'object') setPreviousDocs(data)
+      })
+      .catch(() => {})
+  }, [])
 
   function setDocState(docType: string, state: Partial<DocState>) {
     setDocStates((prev) => ({
@@ -83,6 +104,23 @@ export default function StepDocuments({
     }
 
     setDocState(docType, { status: 'uploaded', fileName })
+    setReusingDocType((prev) => {
+      const next = { ...prev }
+      delete next[docType]
+      return next
+    })
+  }
+
+  async function handleReuse(docType: string, doc: PreviousDoc) {
+    const res = await fetch('/api/vendor/documents/reuse', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ applicationId, sourceDocumentId: doc.id }),
+    })
+    if (res.ok) {
+      setReusingDocType((prev) => ({ ...prev, [docType]: doc.id }))
+      setDocState(docType, { status: 'uploaded', fileName: doc.fileName })
+    }
   }
 
   const requiredDocs = docRequirements.filter((dr) => dr.required)
@@ -108,6 +146,47 @@ export default function StepDocuments({
           return (
             <Card key={dr.docType} className="border-border">
               <CardContent className="pt-4 pb-4">
+                {(previousDocs[dr.docType] ?? []).filter(
+                  (doc) => doc.applicationId !== applicationId
+                ).length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-sm font-medium mb-2 text-muted-foreground">
+                      Previously uploaded — click Reuse to skip re-uploading:
+                    </p>
+                    <div className="flex flex-col gap-2">
+                      {previousDocs[dr.docType]
+                        .filter((doc) => doc.applicationId !== applicationId)
+                        .map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between rounded border px-3 py-2 text-sm bg-muted/30"
+                          >
+                            <span className="truncate max-w-[55%] font-medium">
+                              {doc.fileName}
+                            </span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-muted-foreground text-xs">
+                                {new Date(doc.uploadedAt).toLocaleDateString()}
+                              </span>
+                              {reusingDocType[dr.docType] === doc.id ? (
+                                <span className="text-xs text-green-600 font-medium">
+                                  ✓ Selected
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReuse(dr.docType, doc)}
+                                  className="text-xs px-2 py-1 rounded border border-border hover:bg-accent transition-colors"
+                                >
+                                  Reuse
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">

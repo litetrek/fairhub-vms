@@ -549,4 +549,25 @@ by Prisma when two relations exist between the same two models).
   M7 Communication: Resend confirmation emails + vendor instructions
   Prerequisite: RESEND_API_KEY must be configured in Vercel env vars
 
-*Last updated: Stage 8B complete — Event Day Check-In with mobile-first UI, search/filter, and running counter.*
+#### Stage 8B Addendum — Document Reuse for New Applications
+
+Vendors can now reuse documents from prior applications when submitting a new one,
+skipping re-upload entirely.
+
+##### New API routes
+  `GET  /api/vendor/documents/previous` — returns all documents for the current
+    vendor grouped by docType; most recent first; only docs from other applications
+  `POST /api/vendor/documents/reuse` — copies an existing Document row onto the
+    current application (same file URL, new applicationId, status=PENDING);
+    replaces any existing row of the same docType on the target application
+
+##### Modified files
+  `src/app/vendor/applications/new/steps/StepDocuments.tsx`
+    - Fetches previous docs on mount; renders "Previously uploaded" panel above
+      the upload button for each docType when prior uploads exist
+    - "Reuse" button calls the reuse API and marks the docType as uploaded
+    - Uploading a new file clears any active reuse selection for that docType
+    - Empty state (no prior applications) renders nothing — no UI change for
+      first-time vendors
+
+*Last updated: Stage 8B complete — Event Day Check-In + Document Reuse feature.*
