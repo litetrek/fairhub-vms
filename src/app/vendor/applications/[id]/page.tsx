@@ -86,8 +86,8 @@ export default async function VendorApplicationViewPage({
 
   if (!application) notFound()
 
-  // DRAFT and REJECTED go to edit instead; WITHDRAWN shows read-only detail
-  if (application.status === 'DRAFT' || application.status === 'REJECTED') {
+  // REJECTED goes to edit; DRAFT now shows the detail page (Continue + Delete via ApplicationActions)
+  if (application.status === 'REJECTED') {
     redirect(`/vendor/applications/${id}/edit`)
   }
 
@@ -96,7 +96,10 @@ export default async function VendorApplicationViewPage({
       const { data } = await supabase.storage
         .from('vendor-documents')
         .createSignedUrl(doc.fileUrl, 3600)
-      return { ...doc, signedUrl: data?.signedUrl ?? null }
+      const displayName = doc.fileName.includes('/')
+        ? doc.fileName.split('/').pop() ?? doc.fileName
+        : doc.fileName
+      return { ...doc, signedUrl: data?.signedUrl ?? null, displayName }
     })
   )
 
@@ -250,7 +253,7 @@ export default async function VendorApplicationViewPage({
                       rel="noopener noreferrer"
                       className="text-xs text-primary hover:underline mt-0.5 block"
                     >
-                      {doc.fileName}
+                      {doc.displayName}
                     </a>
                   </div>
                   <span

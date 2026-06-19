@@ -97,11 +97,11 @@ export default function ApplicationActions({ applicationId, status, invoiceStatu
     return (
       <>
         <Button
-          variant="outline"
+          variant="destructive"
           size="sm"
           onClick={() => openDialog('withdraw')}
         >
-          Withdraw
+          Withdraw Application
         </Button>
         <ConfirmDialog
           open={dialogOpen}
