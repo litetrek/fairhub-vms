@@ -11,7 +11,7 @@ type Props = {
   initialContactName: string
   initialPhone: string
   email: string
-  provider: string
+  isGoogleUser: boolean
 }
 
 export default function ProfileClient({
@@ -19,7 +19,7 @@ export default function ProfileClient({
   initialContactName,
   initialPhone,
   email,
-  provider,
+  isGoogleUser,
 }: Props) {
   const [businessName, setBusinessName] = useState(initialBusinessName)
   const [contactName, setContactName] = useState(initialContactName)
@@ -132,7 +132,7 @@ export default function ProfileClient({
         </CardContent>
       </Card>
 
-      {provider !== 'google' && (
+      {!isGoogleUser && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-medium">Change Password</CardTitle>

@@ -21,7 +21,13 @@ export default async function VendorProfilePage() {
   })
   if (!profile) redirect('/auth/login')
 
-  const provider = (user.app_metadata?.provider as string) ?? 'email'
+  // Check all three places Supabase may record the Google provider
+  const identityProviders = (user.identities ?? []).map((id) => id.provider)
+  const metaProviders = (user.app_metadata?.providers as string[] | undefined) ?? []
+  const isGoogleUser =
+    identityProviders.includes('google') ||
+    metaProviders.includes('google') ||
+    user.app_metadata?.provider === 'google'
 
   return (
     <ProfileClient
@@ -29,7 +35,7 @@ export default async function VendorProfilePage() {
       initialContactName={profile.contactName}
       initialPhone={dbUser?.phone ?? ''}
       email={user.email ?? ''}
-      provider={provider}
+      isGoogleUser={isGoogleUser}
     />
   )
 }
