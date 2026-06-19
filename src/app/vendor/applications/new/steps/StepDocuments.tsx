@@ -11,6 +11,7 @@ interface PreviousDoc {
   id: string
   fileName: string
   fileUrl: string
+  signedUrl?: string | null
   uploadedAt: string
   applicationId: string | null
   docType: string
@@ -161,13 +162,26 @@ export default function StepDocuments({
                             key={doc.id}
                             className="flex items-center justify-between rounded border px-3 py-2 text-sm bg-muted/30"
                           >
-                            <span className="truncate max-w-[55%] font-medium">
-                              {doc.fileName}
-                            </span>
+                            <div className="flex flex-col min-w-0 mr-3">
+                              <span className="font-medium text-xs text-muted-foreground mb-0.5">
+                                {DOC_LABELS[dr.docType] ?? dr.docType}
+                              </span>
+                              <span className="truncate">{doc.fileName}</span>
+                            </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-muted-foreground text-xs">
                                 {new Date(doc.uploadedAt).toLocaleDateString()}
                               </span>
+                              {(doc.signedUrl ?? doc.fileUrl) && (
+                                <a
+                                  href={doc.signedUrl ?? doc.fileUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-primary hover:underline"
+                                >
+                                  View
+                                </a>
+                              )}
                               {reusingDocType[dr.docType] === doc.id ? (
                                 <span className="text-xs text-green-600 font-medium">
                                   ✓ Selected

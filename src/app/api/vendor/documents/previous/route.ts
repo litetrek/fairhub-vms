@@ -30,8 +30,17 @@ export async function GET() {
     },
   });
 
-  const grouped: Record<string, typeof docs> = {};
-  for (const doc of docs) {
+  const docsWithSignedUrls = await Promise.all(
+    docs.map(async (doc) => {
+      const { data } = await supabase.storage
+        .from("vendor-documents")
+        .createSignedUrl(doc.fileUrl, 60 * 60);
+      return { ...doc, signedUrl: data?.signedUrl ?? null };
+    })
+  );
+
+  const grouped: Record<string, typeof docsWithSignedUrls> = {};
+  for (const doc of docsWithSignedUrls) {
     if (!grouped[doc.docType]) grouped[doc.docType] = [];
     grouped[doc.docType].push(doc);
   }
