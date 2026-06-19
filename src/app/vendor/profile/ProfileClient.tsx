@@ -109,7 +109,7 @@ export default function ProfileClient({
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null)
   const [passwordError, setPasswordError] = useState<string | null>(null)
 
-  async function uploadImage(file: File, type: 'logo' | 'banner') {
+  async function uploadImage(file: File, type: 'logo' | 'banner' | 'gallery') {
     const formData = new FormData()
     formData.append('file', file)
     formData.append('type', type)
