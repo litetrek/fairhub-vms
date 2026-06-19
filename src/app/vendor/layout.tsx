@@ -1,7 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/prisma'
 import { signOut } from '@/app/auth/actions'
 import { Button } from '@/components/ui/button'
 
@@ -24,6 +26,35 @@ export default async function VendorLayout({
   } = await supabase.auth.getUser()
 
   if (!user) redirect('/auth/login')
+
+  // Profile completeness guard — skip if already on the setup page
+  const headersList = await headers()
+  const pathname = headersList.get('x-invoke-path') ?? headersList.get('x-pathname') ?? ''
+  const isOnSetupPage = pathname.startsWith('/vendor/profile/complete')
+
+  if (!isOnSetupPage) {
+    const [vendorProfile, dbUser] = await Promise.all([
+      prisma.vendorProfile.findUnique({
+        where: { userId: user.id },
+        select: { businessName: true, contactName: true, description: true },
+      }),
+      prisma.user.findUnique({
+        where: { id: user.id },
+        select: { phone: true },
+      }),
+    ])
+
+    const isIncomplete =
+      !vendorProfile ||
+      !vendorProfile.businessName?.trim() ||
+      !vendorProfile.contactName?.trim() ||
+      !dbUser?.phone?.trim() ||
+      !vendorProfile.description?.trim()
+
+    if (isIncomplete) {
+      redirect('/vendor/profile/complete?setup=true')
+    }
+  }
 
   const businessName = user.user_metadata?.businessName || 'My Business'
   const initials = businessName

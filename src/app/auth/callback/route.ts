@@ -3,6 +3,21 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { logVendorActivity, getIpFromRequest } from '@/lib/vendor-activity'
 
+function isProfileComplete(profile: {
+  businessName: string
+  contactName: string
+  phone?: string | null
+  description?: string | null
+} | null): boolean {
+  if (!profile) return false
+  return !!(
+    profile.businessName?.trim() &&
+    profile.contactName?.trim() &&
+    profile.phone?.trim() &&
+    profile.description?.trim()
+  )
+}
+
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
@@ -22,7 +37,21 @@ export async function GET(request: Request) {
 
       const vendorProfile = await prisma.vendorProfile.findUnique({
         where: { userId: data.user.id },
+        select: {
+          id: true,
+          businessName: true,
+          contactName: true,
+          description: true,
+        },
       })
+
+      // Also get phone from User table for the completeness check
+      const dbUser = vendorProfile
+        ? await prisma.user.findUnique({
+            where: { id: data.user.id },
+            select: { phone: true },
+          })
+        : null
 
       if (vendorProfile) {
         await logVendorActivity({
@@ -40,8 +69,15 @@ export async function GET(request: Request) {
         return NextResponse.redirect(dest)
       }
 
-      const redirectTo = vendorProfile ? '/vendor/dashboard' : '/vendor/profile/complete'
-      return NextResponse.redirect(`${origin}${redirectTo}`)
+      const profileWithPhone = vendorProfile
+        ? { ...vendorProfile, phone: dbUser?.phone }
+        : null
+
+      if (!isProfileComplete(profileWithPhone)) {
+        return NextResponse.redirect(`${origin}/vendor/profile/complete?setup=true`)
+      }
+
+      return NextResponse.redirect(`${origin}/vendor/dashboard`)
     }
   }
 
