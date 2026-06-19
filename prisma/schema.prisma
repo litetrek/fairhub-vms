@@ -58,12 +58,13 @@ model VendorProfile {
   description  String?
   createdAt    DateTime @default(now())
 
-  user          User           @relation(fields: [userId], references: [id])
+  user          User                @relation(fields: [userId], references: [id])
   applications  Application[]
   documents     Document[]
   messages      Message[]
   invoices      Invoice[]
   notifications Notification[]
+  activityLogs  VendorActivityLog[]
 }
 
 // ─── EVENT ───────────────────────────────────────────────────
@@ -188,15 +189,16 @@ model Application {
   updatedAt          DateTime          @default(now()) @updatedAt
   createdAt          DateTime          @default(now())
 
-  vendor       VendorProfile     @relation(fields: [vendorId], references: [id])
-  event        Event             @relation(fields: [eventId], references: [id])
-  boothType    BoothType?        @relation(fields: [boothTypeId], references: [id])
+  vendor       VendorProfile      @relation(fields: [vendorId], references: [id])
+  event        Event              @relation(fields: [eventId], references: [id])
+  boothType    BoothType?         @relation(fields: [boothTypeId], references: [id])
   weeks        ApplicationWeek[]
   documents    Document[]
   approvalLogs ApprovalLog[]
   assignment   BoothAssignment?
   invoice      Invoice?
   addOns       ApplicationAddOn[]
+  activityLogs VendorActivityLog[]
 }
 
 enum ApplicationStatus {
@@ -466,4 +468,21 @@ enum MessageStatus {
   PENDING
   SENT
   FAILED
+}
+
+// ─── VENDOR ACTIVITY LOG ─────────────────────────────────────
+// applicationId = null → account-level action (visible to admin only)
+// applicationId set   → application-level action (visible to staff + admin)
+
+model VendorActivityLog {
+  id            String   @id @default(uuid())
+  vendorId      String
+  applicationId String?
+  action        String
+  detail        String?
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+
+  vendor      VendorProfile @relation(fields: [vendorId], references: [id])
+  application Application?  @relation(fields: [applicationId], references: [id])
 }

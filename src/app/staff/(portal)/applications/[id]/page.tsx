@@ -8,6 +8,22 @@ import { Separator } from '@/components/ui/separator'
 import ApplicationActions from './ApplicationActions'
 import BoothAssignForm from './BoothAssignForm'
 
+const ACTION_LABELS: Record<string, string> = {
+  APPLICATION_CREATED:          'Application created',
+  APPLICATION_SUBMITTED:        'Application submitted',
+  APPLICATION_RESUBMITTED:      'Application resubmitted',
+  APPLICATION_WITHDRAWN:        'Application withdrawn',
+  APPLICATION_DELETED:          'Application deleted',
+  DOCUMENT_UPLOADED:            'Document uploaded',
+  DOCUMENT_REUSED:              'Document reused from prior application',
+  DOCUMENT_DELETED:             'Document deleted',
+  STANDALONE_DOCUMENT_UPLOADED: 'Document uploaded (standalone)',
+  STANDALONE_DOCUMENT_DELETED:  'Document deleted (standalone)',
+  LOGIN:                        'Vendor logged in',
+  LOGOUT:                       'Vendor logged out',
+  PROFILE_UPDATED:              'Profile updated',
+}
+
 const statusColors: Record<string, string> = {
   DRAFT: 'bg-slate-100 text-slate-600',
   SUBMITTED: 'bg-blue-50 text-blue-700',
@@ -89,6 +105,12 @@ export default async function StaffApplicationDetailPage({
   })
 
   if (!application) notFound()
+
+  const activityLogs = await prisma.vendorActivityLog.findMany({
+    where: { applicationId: id },
+    orderBy: { createdAt: 'desc' },
+    select: { id: true, action: true, detail: true, createdAt: true },
+  })
 
   const total = application.boothType
     ? Number(application.boothType.basePrice) * application.weeks.length
@@ -254,6 +276,34 @@ export default async function StaffApplicationDetailPage({
                   {log.notes && (
                     <p className="text-xs text-slate-500 mt-0.5">{log.notes}</p>
                   )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Vendor activity log */}
+      {activityLogs.length > 0 && (
+        <Card className="border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Vendor activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="divide-y divide-slate-100">
+              {activityLogs.map((log) => (
+                <div key={log.id} className="py-2 flex justify-between text-sm">
+                  <div>
+                    <span className="font-medium text-slate-700">
+                      {ACTION_LABELS[log.action] ?? log.action}
+                    </span>
+                    {log.detail && (
+                      <span className="text-slate-400 ml-2">— {log.detail}</span>
+                    )}
+                  </div>
+                  <span className="text-slate-400 text-xs shrink-0 ml-4">
+                    {new Date(log.createdAt).toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>

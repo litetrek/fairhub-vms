@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import Link from 'next/link'
 import { ShieldCheck, User, Store, ChevronDown, Loader2 } from 'lucide-react'
 
 type Role = 'VENDOR' | 'STAFF' | 'ADMIN'
@@ -79,6 +80,16 @@ function UserTableRow({
         </div>
         {isSelf && (
           <span className="ml-2 text-xs text-muted-foreground">(you)</span>
+        )}
+      </td>
+      <td className="px-4 py-3">
+        {user.role === 'VENDOR' && (
+          <Link
+            href={`/admin/users/${user.id}`}
+            className="text-xs text-primary hover:underline"
+          >
+            Activity
+          </Link>
         )}
       </td>
     </tr>
@@ -256,13 +267,16 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Change role
               </th>
+              <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                Activity
+              </th>
             </tr>
           </thead>
           <tbody>
             {users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={4}
+                  colSpan={5}
                   className="px-4 py-8 text-center text-sm text-muted-foreground"
                 >
                   No users found.

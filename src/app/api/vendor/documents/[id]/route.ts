@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { logVendorActivity, getIpFromRequest } from "@/lib/vendor-activity";
 
 const BLOCKING_STATUSES = ["SUBMITTED", "UNDER_REVIEW", "CONDITIONALLY_APPROVED", "APPROVED"];
 
 export async function DELETE(
-  _req: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -37,6 +38,15 @@ export async function DELETE(
   if (storageError) console.error("Storage delete error:", storageError);
 
   await prisma.document.delete({ where: { id } });
+
+  const isStandalone = !doc.applicationId;
+  await logVendorActivity({
+    vendorId: profile.id,
+    action: isStandalone ? "STANDALONE_DOCUMENT_DELETED" : "DOCUMENT_DELETED",
+    applicationId: doc.applicationId ?? null,
+    detail: `Deleted: ${doc.fileName} (${doc.docType})`,
+    ipAddress: getIpFromRequest(request),
+  });
 
   return NextResponse.json({ success: true });
 }

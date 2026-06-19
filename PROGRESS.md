@@ -616,3 +616,49 @@ New component: `src/app/vendor/documents/DocumentsClient.tsx` (client)
   fetches + generates signed URLs, passes serialized data to DocumentsClient
 
 *Last updated: Vendor self-service — withdraw/delete applications, document preview/delete/upload.*
+
+---
+
+### Feature: Vendor Activity Logging
+
+All vendor-initiated portal actions are now logged to a `VendorActivityLog` table
+with timestamp, action type, optional detail string, application context, and IP address.
+
+#### Schema changes
+- New model `VendorActivityLog` (id, vendorId, applicationId?, action, detail?, ipAddress?, createdAt)
+- Back-relation `activityLogs VendorActivityLog[]` added to `VendorProfile`
+- Back-relation `activityLogs VendorActivityLog[]` added to `Application`
+- `prisma db push` + `prisma generate` run
+
+#### New helper
+- `src/lib/vendor-activity.ts` — `logVendorActivity()` + `getIpFromRequest()`
+  Wrapped in try/catch so a log failure never breaks the main request.
+
+#### Actions logged
+| Action | Where |
+|---|---|
+| LOGIN | `src/app/auth/callback/route.ts` (OAuth); `src/app/auth/actions.ts` (email/password) |
+| APPLICATION_CREATED | `src/lib/applications.ts` `createDraftApplication()` |
+| APPLICATION_SUBMITTED | `src/lib/applications.ts` `submitApplication()` (DRAFT → SUBMITTED) |
+| APPLICATION_RESUBMITTED | `src/lib/applications.ts` `submitApplication()` (REJECTED → SUBMITTED) |
+| APPLICATION_WITHDRAWN | `src/app/api/vendor/applications/[id]/withdraw/route.ts` |
+| APPLICATION_DELETED | `src/app/api/vendor/applications/[id]/route.ts` (DELETE) |
+| DOCUMENT_UPLOADED | `src/lib/applications.ts` `createDocumentRecord()` |
+| DOCUMENT_REUSED | `src/app/api/vendor/documents/reuse/route.ts` |
+| DOCUMENT_DELETED | `src/app/api/vendor/documents/[id]/route.ts` (application-scoped doc) |
+| STANDALONE_DOCUMENT_UPLOADED | `src/app/api/vendor/documents/route.ts` |
+| STANDALONE_DOCUMENT_DELETED | `src/app/api/vendor/documents/[id]/route.ts` (standalone doc) |
+
+#### Staff view
+- `src/app/staff/(portal)/applications/[id]/page.tsx` — new "Vendor activity" card
+  shows all application-scoped log entries, newest first.
+
+#### Admin view
+- `src/app/admin/users/[id]/page.tsx` — new page: full activity log for any vendor
+  (all entries including account-level), with IP address and app reference.
+- `src/app/admin/users/page.tsx` — "Activity" column added; VENDOR rows link to detail page.
+
+#### Notes
+- Application delete also deletes its activity log rows (cascade via `deleteMany` before `delete`)
+- IP logging is null for server actions (no `Request` object available)
+- LOGOUT is not logged server-side (Supabase sign-out is client-side); TODO left for future

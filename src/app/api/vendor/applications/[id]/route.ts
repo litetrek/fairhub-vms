@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { logVendorActivity, getIpFromRequest } from "@/lib/vendor-activity";
 
 export async function DELETE(
-  _req: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -31,7 +32,16 @@ export async function DELETE(
   await prisma.applicationAddOn.deleteMany({ where: { applicationId: id } });
   await prisma.document.deleteMany({ where: { applicationId: id } });
   await prisma.approvalLog.deleteMany({ where: { applicationId: id } });
+  await prisma.vendorActivityLog.deleteMany({ where: { applicationId: id } });
   await prisma.application.delete({ where: { id } });
+
+  await logVendorActivity({
+    vendorId: profile.id,
+    action: "APPLICATION_DELETED",
+    applicationId: null,
+    detail: `Booth type: ${app.boothTypeId ?? "none"}, Status was: DRAFT`,
+    ipAddress: getIpFromRequest(request),
+  });
 
   return NextResponse.json({ success: true });
 }

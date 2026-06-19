@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { logVendorActivity } from '@/lib/vendor-activity'
 
 async function getAuthenticatedVendorProfile() {
   const supabase = await createClient()
@@ -25,6 +26,11 @@ export async function createDraftApplication(
     const vendor = await getAuthenticatedVendorProfile()
     const application = await prisma.application.create({
       data: { vendorId: vendor.id, eventId, status: 'DRAFT' },
+    })
+    await logVendorActivity({
+      vendorId: vendor.id,
+      action: 'APPLICATION_CREATED',
+      applicationId: application.id,
     })
     return { applicationId: application.id }
   } catch (e) {
@@ -105,6 +111,12 @@ export async function createDocumentRecord(params: {
         },
       })
     }
+    await logVendorActivity({
+      vendorId: vendor.id,
+      action: 'DOCUMENT_UPLOADED',
+      applicationId: params.applicationId,
+      detail: `${params.docType}: ${params.fileName}`,
+    })
     return {}
   } catch (e) {
     return { error: String(e) }
@@ -121,9 +133,15 @@ export async function submitApplication(
     })
     if (!app) return { error: 'Application not found' }
 
+    const isResubmit = app.status === 'REJECTED'
     await prisma.application.update({
       where: { id: applicationId },
       data: { status: 'SUBMITTED', submittedAt: new Date(), rejectionNote: null },
+    })
+    await logVendorActivity({
+      vendorId: vendor.id,
+      action: isResubmit ? 'APPLICATION_RESUBMITTED' : 'APPLICATION_SUBMITTED',
+      applicationId,
     })
     revalidatePath('/vendor/dashboard')
     return {}

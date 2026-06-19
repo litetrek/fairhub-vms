@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { logVendorActivity, getIpFromRequest } from '@/lib/vendor-activity'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -22,6 +23,16 @@ export async function GET(request: Request) {
       const vendorProfile = await prisma.vendorProfile.findUnique({
         where: { userId: data.user.id },
       })
+
+      if (vendorProfile) {
+        await logVendorActivity({
+          vendorId: vendorProfile.id,
+          action: 'LOGIN',
+          applicationId: null,
+          detail: `Provider: ${data.user.app_metadata?.provider ?? 'email'}`,
+          ipAddress: getIpFromRequest(request),
+        })
+      }
 
       // Post-Stripe redirect: send vendor straight to their invoice page
       if (next?.startsWith('/vendor/') && vendorProfile) {
