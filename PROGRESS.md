@@ -759,3 +759,89 @@ single "Save" button — used when a vendor navigates to the page manually.
 - `0f2d8b1` fix: move profile/complete to (onboarding) route group to break redirect loop
 - `fad8631` fix: accept bare domains in website field, auto-prepend https://
 - `a11372f` feat: add logo and feature photo upload as step 3 of onboarding wizard
+
+---
+
+### ✅ Stage 8E — Application Flow UX Improvements (COMPLETE)
+
+#### Improvement 1 — Pre-fill Application Wizard from Vendor Profile
+
+Step 2 of the new-application wizard (booth type selection) now pre-fills with
+the vendor's saved profile data so they don't retype what they already entered.
+
+- `StepBoothType.tsx` (fully rewritten): added `productDescription` textarea and
+  `productCategory` input; when profile values are present, a helper note reads
+  "Pre-filled from your profile — feel free to customize for this event"
+- `ApplicationWizard.tsx`: new `productDescription` / `productCategory` state,
+  initialised from new `profileDescription` / `profileBusinessType` props;
+  `handleBoothTypeNext` calls `updateApplicationBoothType` and `updateApplicationDetails`
+  in parallel
+- `src/app/vendor/applications/new/page.tsx`: passes `vendorProfile.description` and
+  `vendorProfile.businessType` down to the wizard
+- `src/lib/applications.ts`: new server action `updateApplicationDetails()` saves
+  `productDescription` and `productCategory` to the Application record
+
+Note: these two fields existed in the Prisma schema but no wizard step had ever
+collected them before this improvement.
+
+#### Improvement 2 — Staff Queue DRAFT Exclusion Fix
+
+DRAFT applications were appearing in the staff review queue's "All" filter because
+the Prisma `where` clause was `{}` (no restriction). Fixed:
+
+- `src/app/staff/(portal)/queue/page.tsx`: `statusFilter` default changed from `{}`
+  to `{ status: { in: ALL_STAFF_STATUSES } }` where `ALL_STAFF_STATUSES` explicitly
+  excludes `DRAFT` (SUBMITTED, UNDER_REVIEW, CONDITIONALLY_APPROVED, APPROVED,
+  REJECTED, WITHDRAWN)
+- "Total applications" stat card also excludes DRAFT from the count
+
+#### Improvement 3 — Application Status Timeline on Vendor Detail Page
+
+A horizontal 6-step stepper now appears on the vendor application detail page below
+the status badge, giving vendors a visual sense of where they are in the process.
+
+- `src/app/vendor/applications/[id]/page.tsx` (fully rewritten): added `StatusTimeline`
+  server component with steps: Submitted → Under Review → Approved → Booth Assigned →
+  Invoice Sent → Paid
+- `completedCount()` helper determines progress from `status`, `assignment`, and
+  `invoice.status`
+- REJECTED: shows first 3 steps only (truncated at Approved), with a red ✕ on the
+  Approved step and a rejection note card below the timeline
+- CONDITIONALLY_APPROVED: Approved step shown in amber with label "Cond. Approved"
+  and a sub-note "Awaiting additional documents before full approval"
+- WITHDRAWN: shows an informational notice instead of the stepper
+- DRAFT: timeline hidden (only shown once submitted)
+- Removed the previous REJECTED auto-redirect to `/edit` — rejected applications
+  now show the detail view with timeline and CTA banner
+
+#### Improvement 4 — Contextual Next-Step CTA Banner
+
+A coloured left-border card appears below the timeline to tell the vendor exactly
+what action to take next.
+
+`CTABanner` component (same file) maps status to message + optional action button:
+
+| Status | Colour | Message | Button |
+|---|---|---|---|
+| SUBMITTED | Blue | Application is being reviewed | — |
+| UNDER_REVIEW | Blue | Team is reviewing | — |
+| CONDITIONALLY_APPROVED | Amber | Upload missing documents | Upload Documents → |
+| APPROVED (no invoice) | Blue | Booth is being assigned | — |
+| APPROVED + unpaid invoice | Amber | Pay invoice to secure booth | Pay Invoice → |
+| APPROVED + paid | Green | You're all set! | — |
+| REJECTED | Red | Application not approved | Edit & Resubmit → |
+
+Banner is hidden for DRAFT and WITHDRAWN.
+
+#### Improvement 5 — Dashboard Amount Due Card + Unpaid Invoice Banner
+
+- `src/app/vendor/dashboard/page.tsx`:
+  - "Amount due" stat card is now wrapped in a `<Link href="/vendor/invoices">` with
+    hover border highlight and "Pay now →" label when `amountDue > 0`; plain card when
+    amount is zero
+  - Unpaid invoice banner added above the stat cards: appears when any APPROVED
+    application has an invoice that is neither PAID nor CANCELLED; links directly to
+    the single invoice if there is only one, or to `/vendor/invoices` if multiple
+
+#### Commit
+- `b9e50ce` feat: application flow UX improvements — prefill, status timeline, CTA banners, queue fix
