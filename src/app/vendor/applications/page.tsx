@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import ApplicationActions from '@/components/vendor/ApplicationActions'
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'status-badge-draft',
@@ -12,15 +13,17 @@ const STATUS_COLORS: Record<string, string> = {
   CONDITIONALLY_APPROVED: 'status-badge-secondary-state',
   APPROVED: 'status-badge-approved',
   REJECTED: 'status-badge-rejected',
+  WITHDRAWN: 'status-badge-draft',
 }
 
 const STATUS_LABELS: Record<string, string> = {
   DRAFT: 'Draft',
   SUBMITTED: 'Submitted',
   UNDER_REVIEW: 'Under review',
-  CONDITIONALLY_APPROVED: 'Cond. approved',
+  CONDITIONALLY_APPROVED: 'Conditionally approved',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
+  WITHDRAWN: 'Withdrawn',
 }
 
 export default async function VendorApplicationsPage() {
@@ -39,6 +42,7 @@ export default async function VendorApplicationsPage() {
           event: true,
           boothType: true,
           weeks: { include: { eventWeek: true } },
+          invoice: { select: { status: true } },
         },
       },
     },
@@ -104,6 +108,9 @@ export default async function VendorApplicationsPage() {
                       {app.status === 'REJECTED' && (
                         <p className="text-xs text-destructive mt-0.5">Changes requested by staff</p>
                       )}
+                      {app.status === 'WITHDRAWN' && (
+                        <p className="text-xs text-muted-foreground mt-0.5">You have withdrawn this application</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <span
@@ -114,6 +121,11 @@ export default async function VendorApplicationsPage() {
                       <Button variant="outline" size="sm" className="text-xs h-7" asChild>
                         <Link href={href}>{linkLabel}</Link>
                       </Button>
+                      <ApplicationActions
+                        applicationId={app.id}
+                        status={app.status}
+                        invoiceStatus={app.invoice?.status ?? null}
+                      />
                     </div>
                   </div>
                 )

@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import ApplicationActions from '@/components/vendor/ApplicationActions'
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: 'status-badge-draft',
@@ -13,6 +14,7 @@ const STATUS_COLORS: Record<string, string> = {
   CONDITIONALLY_APPROVED: 'status-badge-secondary-state',
   APPROVED: 'status-badge-approved',
   REJECTED: 'status-badge-rejected',
+  WITHDRAWN: 'status-badge-draft',
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -22,6 +24,7 @@ const STATUS_LABELS: Record<string, string> = {
   CONDITIONALLY_APPROVED: 'Conditionally approved',
   APPROVED: 'Approved',
   REJECTED: 'Rejected',
+  WITHDRAWN: 'Withdrawn',
 }
 
 const DOC_LABELS: Record<string, string> = {
@@ -83,7 +86,7 @@ export default async function VendorApplicationViewPage({
 
   if (!application) notFound()
 
-  // DRAFT and REJECTED go to edit instead
+  // DRAFT and REJECTED go to edit instead; WITHDRAWN shows read-only detail
   if (application.status === 'DRAFT' || application.status === 'REJECTED') {
     redirect(`/vendor/applications/${id}/edit`)
   }
@@ -103,11 +106,18 @@ export default async function VendorApplicationViewPage({
           <h1 className="text-xl font-medium text-foreground">Application details</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{application.event.name}</p>
         </div>
-        <span
-          className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[application.status] ?? 'status-badge-draft'}`}
-        >
-          {STATUS_LABELS[application.status] ?? application.status}
-        </span>
+        <div className="flex items-center gap-3">
+          <span
+            className={`text-sm px-3 py-1 rounded-full font-medium ${STATUS_COLORS[application.status] ?? 'status-badge-draft'}`}
+          >
+            {STATUS_LABELS[application.status] ?? application.status}
+          </span>
+          <ApplicationActions
+            applicationId={application.id}
+            status={application.status}
+            invoiceStatus={invoice?.status ?? null}
+          />
+        </div>
       </div>
 
       {/* Application summary */}

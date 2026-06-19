@@ -570,4 +570,49 @@ skipping re-upload entirely.
     - Empty state (no prior applications) renders nothing — no UI change for
       first-time vendors
 
-*Last updated: Stage 8B complete — Event Day Check-In + Document Reuse feature.*
+---
+
+### Feature: Vendor Self-Service — Application Withdrawal/Deletion + Document Management
+
+#### Schema change
+- `WITHDRAWN` added to `ApplicationStatus` enum (`prisma db push` run)
+
+#### Application withdrawal / deletion
+Business rules enforced server-side:
+- `DRAFT` → vendor can permanently delete (child records cascade-deleted)
+- `SUBMITTED` / `UNDER_REVIEW` / `CONDITIONALLY_APPROVED` → vendor can withdraw
+- `APPROVED` → withdraw allowed only if invoice not yet PAID or PARTIALLY_PAID
+- `APPROVED` + invoice paid → API returns 400; no UI button shown
+- `WITHDRAWN` / `REJECTED` → no action available
+
+New API routes:
+- `DELETE /api/vendor/applications/[id]` — deletes DRAFT + all child records
+- `PATCH  /api/vendor/applications/[id]/withdraw` — sets status to WITHDRAWN
+
+New component: `src/components/vendor/ApplicationActions.tsx` (client)
+- Renders Delete (red) or Withdraw (outline) button based on status + invoice status
+- Confirmation Dialog before any destructive action
+- Delete → redirects to /vendor/applications; Withdraw → router.refresh()
+
+Updated pages:
+- `/vendor/applications` — WITHDRAWN badge, ApplicationActions per row, invoice status included in query
+- `/vendor/applications/[id]` — WITHDRAWN in status maps, ApplicationActions in header; WITHDRAWN shows read-only detail (not redirected to edit)
+
+#### My Documents page enhancements
+- Filenames are clickable signed URLs (1hr expiry) — vendor can preview documents
+- Trash icon per row — vendor can delete docs not attached to live applications;
+  also removes file from Supabase Storage
+- New "Upload a document" panel at top — vendor selects doc type + file,
+  uploads standalone (applicationId = null); appears in reuse list for future applications
+
+New API routes:
+- `POST   /api/vendor/documents`        — creates standalone Document record
+- `DELETE /api/vendor/documents/[id]`   — deletes doc DB record + storage file
+
+New component: `src/app/vendor/documents/DocumentsClient.tsx` (client)
+- Manages local doc state (optimistic delete)
+- Upload form with browser Supabase client for storage
+- `src/app/vendor/documents/page.tsx` converted to thin server component —
+  fetches + generates signed URLs, passes serialized data to DocumentsClient
+
+*Last updated: Vendor self-service — withdraw/delete applications, document preview/delete/upload.*

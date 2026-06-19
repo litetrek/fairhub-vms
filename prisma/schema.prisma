@@ -206,6 +206,7 @@ enum ApplicationStatus {
   CONDITIONALLY_APPROVED
   APPROVED
   REJECTED
+  WITHDRAWN
 }
 
 // ─── APPLICATION WEEKS ───────────────────────────────────────
