@@ -73,18 +73,11 @@ export default function ProfileCompleteForm({
     setLoading(true)
 
     try {
-      // If no profile exists yet (Google OAuth first-time), create the User+VendorProfile record first
       if (!hasProfile) {
         const createRes = await fetch('/api/auth/create-profile', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            email,
-            phone,
-            businessName,
-            contactName,
-          }),
+          body: JSON.stringify({ userId, email, phone, businessName, contactName }),
         })
         if (!createRes.ok) {
           const d = await createRes.json()
@@ -94,7 +87,6 @@ export default function ProfileCompleteForm({
         }
       }
 
-      // PATCH with all collected fields (works whether profile was just created or already existed)
       const patchRes = await fetch('/api/vendor/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -276,9 +268,7 @@ export default function ProfileCompleteForm({
           <CardDescription>
             Let&apos;s set up your vendor profile so our team can learn about your business.
           </CardDescription>
-          <p className="text-xs text-muted-foreground pt-1">
-            Step {step} of 2
-          </p>
+          <p className="text-xs text-muted-foreground pt-1">Step {step} of 2</p>
           <div className="flex gap-1 mt-2">
             <div className={`h-1 flex-1 rounded-full ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
             <div className={`h-1 flex-1 rounded-full ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />

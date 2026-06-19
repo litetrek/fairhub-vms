@@ -42,7 +42,10 @@ export default async function ProfileCompletePage({
   const provider = (user.app_metadata?.provider as string) ?? 'email'
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div
+      className="min-h-screen flex items-center justify-center bg-background p-4"
+      data-surface="festive"
+    >
       <ProfileCompleteForm
         userId={user.id}
         email={user.email!}
