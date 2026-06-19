@@ -484,5 +484,5 @@ model VendorActivityLog {
   createdAt     DateTime @default(now())
 
   vendor      VendorProfile @relation(fields: [vendorId], references: [id])
-  application Application?  @relation(fields: [applicationId], references: [id])
+  application Application?  @relation(fields: [applicationId], references: [id], onDelete: SetNull)
 }

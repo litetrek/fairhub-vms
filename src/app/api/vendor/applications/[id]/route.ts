@@ -32,7 +32,7 @@ export async function DELETE(
   await prisma.applicationAddOn.deleteMany({ where: { applicationId: id } });
   await prisma.document.deleteMany({ where: { applicationId: id } });
   await prisma.approvalLog.deleteMany({ where: { applicationId: id } });
-  await prisma.vendorActivityLog.deleteMany({ where: { applicationId: id } });
+  // VendorActivityLog rows are preserved: onDelete: SetNull nullifies their applicationId
   await prisma.application.delete({ where: { id } });
 
   await logVendorActivity({
