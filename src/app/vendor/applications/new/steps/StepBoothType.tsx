@@ -118,7 +118,7 @@ export default function StepBoothType({
       {/* Product details */}
       <div className="space-y-4 pt-1">
         <div className="space-y-1.5">
-          <Label htmlFor="productDescription">What will you be selling at this event?</Label>
+          <Label htmlFor="productDescription" className="text-foreground">What will you be selling at this event?</Label>
           <Textarea
             id="productDescription"
             rows={3}
@@ -133,7 +133,7 @@ export default function StepBoothType({
           )}
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="productCategory">Product category</Label>
+          <Label htmlFor="productCategory" className="text-foreground">Product category</Label>
           <Input
             id="productCategory"
             placeholder="e.g. Food, Crafts, Jewelry, Clothing"
