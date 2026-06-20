@@ -200,6 +200,42 @@ export default async function StaffVendorDetailPage({
             </Card>
           )}
 
+          {/* Product Photos */}
+          {vendor.galleryImages && vendor.galleryImages.length > 0 && (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">
+                  Product Photos ({vendor.galleryImages.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-3 gap-2">
+                  {vendor.galleryImages.map((url, i) => (
+                    <a key={url} href={url} target="_blank" rel="noopener noreferrer"
+                      className="block aspect-square rounded-lg overflow-hidden border border-slate-200 hover:opacity-80 transition-opacity">
+                      <img src={url} alt={`Product ${i + 1}`} className="w-full h-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Feature Photo (full width, if not already shown in header) */}
+          {vendor.bannerImageUrl && (
+            <Card className="border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium">Feature Photo</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0 overflow-hidden rounded-b-lg">
+                <a href={vendor.bannerImageUrl} target="_blank" rel="noopener noreferrer">
+                  <img src={vendor.bannerImageUrl} alt="Feature photo"
+                    className="w-full max-h-64 object-cover hover:opacity-90 transition-opacity" />
+                </a>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Applications */}
           <Card className="border-slate-200">
             <CardHeader className="pb-2">

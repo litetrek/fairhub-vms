@@ -253,14 +253,16 @@ export default function ProfileClient({
     <div className="max-w-3xl mx-auto space-y-5">
       <div>
         <h1 className="text-xl font-medium text-foreground">My Profile</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">{email}</p>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          {initialBusinessName} · {initialContactName} · {email}
+        </p>
       </div>
 
-      <Tabs defaultValue="photos">
+      <Tabs defaultValue="business">
         <TabsList className="w-full">
-          <TabsTrigger value="photos" className="flex-1">Photos</TabsTrigger>
           <TabsTrigger value="business" className="flex-1">Business</TabsTrigger>
           <TabsTrigger value="online" className="flex-1">Online</TabsTrigger>
+          <TabsTrigger value="photos" className="flex-1">Photos</TabsTrigger>
           <TabsTrigger value="account" className="flex-1">Account</TabsTrigger>
         </TabsList>
 
