@@ -32,6 +32,7 @@ type Props = {
   initialTaxId: string
   email: string
   isGoogleUser: boolean
+  isSetup?: boolean
 }
 
 export default function ProfileClient({
@@ -55,6 +56,7 @@ export default function ProfileClient({
   initialTaxId,
   email,
   isGoogleUser,
+  isSetup = false,
 }: Props) {
   // ── Images ───────────────────────────────────────────────────
   const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl)
@@ -251,10 +253,15 @@ export default function ProfileClient({
 
   return (
     <div className="max-w-3xl mx-auto space-y-5">
+      {isSetup && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Welcome! Your account has been created. Please fill in your business details below to complete your profile.
+        </div>
+      )}
       <div>
         <h1 className="text-xl font-medium text-foreground">My Profile</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          {initialBusinessName} · {initialContactName} · {email}
+          {initialBusinessName || email} · {initialContactName} · {email}
         </p>
       </div>
 

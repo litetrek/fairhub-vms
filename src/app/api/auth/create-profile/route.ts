@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { ensureVendorUser } from '@/lib/auth/ensure-vendor-user'
 
 export async function POST(request: Request) {
   try {
@@ -13,29 +14,23 @@ export async function POST(request: Request) {
       )
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId },
+    const result = await ensureVendorUser({
+      userId,
+      email,
+      userMetadata: { businessName, contactName, phone, role: 'VENDOR' },
+      emailConfirmed: true,
     })
 
-    if (existingUser) {
+    if (result.existing) {
+      // Backfill phone if register supplied it and User row predates this call
+      if (phone) {
+        await prisma.user.updateMany({
+          where: { id: userId, phone: null },
+          data: { phone },
+        })
+      }
       return NextResponse.json({ success: true, existing: true })
     }
-
-    await prisma.user.create({
-      data: {
-        id: userId,
-        email,
-        phone: phone || null,
-        role: 'VENDOR',
-        vendorProfile: {
-          create: {
-            businessName,
-            contactName,
-            businessType: '',
-          },
-        },
-      },
-    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

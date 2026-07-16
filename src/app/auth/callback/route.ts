@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { ensureVendorUser } from '@/lib/auth/ensure-vendor-user'
 import { logVendorActivity, getIpFromRequest } from '@/lib/vendor-activity'
 
 function isProfileComplete(profile: {
@@ -35,6 +36,18 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}/staff/queue`)
       }
 
+      await ensureVendorUser({
+        userId: data.user.id,
+        email: data.user.email!,
+        userMetadata: data.user.user_metadata,
+        emailConfirmed: !!data.user.email_confirmed_at,
+      })
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: data.user.id },
+        select: { id: true, phone: true },
+      })
+
       const vendorProfile = await prisma.vendorProfile.findUnique({
         where: { userId: data.user.id },
         select: {
@@ -44,14 +57,6 @@ export async function GET(request: Request) {
           description: true,
         },
       })
-
-      // Also get phone from User table for the completeness check
-      const dbUser = vendorProfile
-        ? await prisma.user.findUnique({
-            where: { id: data.user.id },
-            select: { phone: true },
-          })
-        : null
 
       if (vendorProfile) {
         await logVendorActivity({
