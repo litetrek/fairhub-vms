@@ -54,6 +54,7 @@ export async function proxy(request: NextRequest) {
     '/staff/login',
     '/fair/',
     '/vendor/profile/complete',
+    '/api/auth/create-profile',
   ]
   if (pathname === '/' || publicRoutes.some((route) => pathname.startsWith(route))) {
     console.log('[proxy] public route — pass through')
