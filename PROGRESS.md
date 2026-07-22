@@ -36,7 +36,7 @@
 | M5 | Booth Assignment (staff-driven) | ✅ Complete |
 | M6 | Invoicing & Payment | ✅ Complete (Stripe live — Stage 7) |
 | M7 | Communication | 🔲 Future |
-| M8 | Admin Dashboard / Event Check-in | 🔲 Future |
+| M8 | Admin Dashboard / Event Check-in | ✅ Complete (Stages 8A + 8B) |
 
 ---
 
@@ -195,11 +195,10 @@
 
 | Issue | Fix |
 |---|---|
-| Next.js middleware must be `src/middleware.ts` | Claude Code had renamed it — always verify filename |
+| Next.js 16 routing file | Must be `src/proxy.ts` — never create or rename to `middleware.ts` |
 | Prisma v7 requires `@prisma/adapter-pg` | Use `DATABASE_URL` port 6543 (runtime), `DIRECT_URL` port 5432 (migrations) |
 | shadcn v4 broke `asChild` Button pattern | Restored Slot pattern manually |
 | Supabase free tier SMTP rate limit (3/hour) | Disabled email confirmation during dev; re-enable when Resend configured |
-| Next.js 16 deprecates `middleware.ts` | Renamed to `proxy.ts` — enforced in all prompts |
 | Project was in Box/OneDrive (sync conflicts) | Moved to `C:\Users\vince\code-projects\fairhub-vms` |
 | Prisma config/client split | `prisma.config.ts` must be `defineConfig` only; PrismaClient singleton in `src/lib/prisma.ts` |
 | `Event.updatedAt` backfill error on db push | Added `@default(now())` alongside `@updatedAt` to allow backfill of existing rows |
@@ -454,33 +453,30 @@ where the payment confirmation email would be sent.
   `<Suspense fallback={<div />}>` in the default export `LoginPage`; `'use client'`
   retained at top of file. Build now passes; `/auth/login` shows as `○ (Static)`
 
-### Stage 6C — E2E Auth Flows (NEXT)
-- Login flow (email/password vendor)
-- Register flow (new vendor)
-- Role-based redirects (vendor→dashboard, staff→queue, admin→events)
-- Unauthenticated redirect to /auth/login
-- Google OAuth callback with no profile → /vendor/profile/complete
-- Target: ~8 E2E tests in tests/e2e/auth.spec.ts
+### Stage 6C — E2E Auth Flows (STUBS ONLY — NEXT)
+- Spec file exists: `tests/e2e/auth.spec.ts` — all tests are `test.fixme()` placeholders
+- Target flows: login, register, role redirects, unauthenticated guard, OAuth → profile complete
+- Target: ~8 E2E tests once implemented
 
-### Stage 6D — E2E Vendor Journey (PLANNED)
-- Full application flow: apply → submit → view status
-- Rejected vendor re-edit and resubmit flow
-- Target: ~7 E2E tests in tests/e2e/vendor-application.spec.ts
+### Stage 6D — E2E Vendor Journey (STUBS ONLY — PLANNED)
+- Spec file exists: `tests/e2e/vendor-application.spec.ts` — all tests are `test.fixme()`
+- Target flows: apply → submit → view status; rejected vendor re-edit and resubmit
+- Target: ~7 E2E tests once implemented
 
-### Stage 6E — E2E Staff Journey (PLANNED)
-- Review queue → approve/reject → assign booth → generate invoice
-- Record offline payment → invoice status updates
-- Target: ~8 E2E tests in tests/e2e/staff-review.spec.ts +
-  tests/e2e/booth-assignment.spec.ts + tests/e2e/invoicing.spec.ts
+### Stage 6E — E2E Staff Journey (STUBS ONLY — PLANNED)
+- Spec files exist: `staff-review.spec.ts`, `booth-assignment.spec.ts`, `invoicing.spec.ts` — all `test.fixme()`
+- Target flows: review queue → approve/reject → assign booth → invoice → offline payment
+- Target: ~8 E2E tests once implemented
 
-### Stage 6F — E2E Admin Journey (PLANNED)
-- Create event → setup booth types/add-ons/weeks → publish
-- Confirm public page appears at /fair/[slug]
-- Target: ~6 E2E tests in tests/e2e/admin-setup.spec.ts
+### Stage 6F — E2E Admin Journey (STUBS ONLY — PLANNED)
+- Spec file exists: `tests/e2e/admin-setup.spec.ts` — all tests are `test.fixme()`
+- Target flows: create event → setup → publish → confirm `/fair/[slug]`
+- Target: ~6 E2E tests once implemented
 
-### Stage 8+ — Remaining Modules
-- **M7 Communication:** vendor messaging (email/SMS via Resend + Twilio)
-- **M8 Event Check-in:** staff marks vendor present with auto timestamp
+### What's Next
+- **Stage 6C–6F:** Implement E2E tests (stub files already scaffolded; only `public-discovery.spec.ts` has passing tests)
+- **Stage 8H:** Finish onboarding consolidation onto `/vendor/profile` (in progress — see below)
+- **Stage 9 / M7 Communication:** Resend confirmation emails + vendor instructions (requires `RESEND_API_KEY` in Vercel)
 
 ---
 
@@ -544,10 +540,6 @@ by Prisma when two relations exist between the same two models).
 #### How to access
   /staff/checkin → event selector (auto-redirects if one active event)
   /staff/checkin/[eventId] → main check-in screen
-
-#### Stage 9 — Next
-  M7 Communication: Resend confirmation emails + vendor instructions
-  Prerequisite: RESEND_API_KEY must be configured in Vercel env vars
 
 ---
 
@@ -677,8 +669,6 @@ removed from approvalLogs query.
   Documents, Review) — changed from `variant="outline"` (transparent) to
   `variant="secondary"` (solid background) on all three steps
 
-*Last updated: unified activity log on staff detail page; Back button contrast fix.*
-
 ---
 
 ### ✅ Stage 8D — Vendor Onboarding Wizard (COMPLETE)
@@ -700,8 +690,11 @@ navigating directly to `/vendor/dashboard`.
   the vendor's profile has all four required fields non-empty:
   `businessName`, `contactName`, `phone`, `description`
 - If profile is missing or incomplete → redirects to `/vendor/profile/complete?setup=true`
+  *(Stage 8H in progress: local uncommitted changes redirect to `/vendor/profile?setup=true` instead)*
 - If profile is complete → `/vendor/dashboard` (unchanged)
 - Post-Stripe redirect short-circuit runs before the completeness check (no regression)
+- Stage 8H adds eager `User` + stub `VendorProfile` creation for new Google OAuth users
+  so `src/proxy.ts` no longer blocks them with "no User record"
 
 #### Email Vendor Post-Signup Redirect
 - `/auth/register`: after successful `supabase.auth.signUp()`, checks `data.session`:
@@ -845,3 +838,129 @@ Banner is hidden for DRAFT and WITHDRAWN.
 
 #### Commit
 - `b9e50ce` feat: application flow UX improvements — prefill, status timeline, CTA banners, queue fix
+- `6be0693` docs: update PROGRESS.md — Stage 8E application flow UX improvements
+- `1bec75b` fix: show label text on dark surface in StepBoothType
+
+---
+
+### ✅ Stage 8F — Expanded Vendor Profile + Staff Vendor Directory (COMPLETE)
+
+> Committed as `2d17ee2` (June 19, 2026) — predates Stage 8D in git history but
+> extends the profile system that onboarding and self-service build on.
+
+#### Schema changes (`VendorProfile`)
+- `logoUrl`, `bannerImageUrl`, `instagramUrl`, `facebookUrl`, `tiktokUrl`
+- `yearsInBusiness`, `taxId`, `profileUpdatedAt`
+- `prisma db push` + `prisma generate` run
+
+#### Vendor profile APIs
+- `GET/PATCH /api/vendor/profile` — all new fields; sets `profileUpdatedAt` on write
+- `POST /api/vendor/profile/upload` — image upload to Supabase Storage
+- `POST /api/vendor/profile/change-password` — email/password vendors only
+
+#### Vendor profile page (`/vendor/profile`)
+- `ProfileClient.tsx` — business info, about, online presence, logo/banner uploads,
+  change-password section; each area with independent save
+- `page.tsx` — server component loads profile + detects Google vs email login
+
+#### Staff vendor directory
+- `GET /api/staff/vendors` — list all vendors (staff/admin auth)
+- `GET /api/staff/vendors/[id]` — single vendor detail
+- `/staff/vendors` — searchable directory table with logo thumbnails
+- `/staff/vendors/[id]` — banner/logo header, two-column detail layout, applications table
+- "Vendors" nav link added to staff layout
+- "View vendor profile →" link on `/staff/applications/[id]`
+
+#### Commit
+- `2d17ee2` feat: expanded vendor profile, staff vendor directory
+
+---
+
+### ✅ Stage 8G — Profile UX Polish (COMPLETE)
+
+#### Product photo gallery
+- Schema: `galleryImages String[] @default([])` on `VendorProfile`
+- Upload API accepts `type: 'gallery'` in addition to `logo` and `banner`
+- Vendor profile Photos tab: up to 6 product images, hover-to-remove grid
+- Staff vendor detail page shows product photo gallery
+
+#### Storage bucket fix
+- Logo/banner/gallery uploads moved to public `vendor-media` Supabase bucket
+  (replacing initial `vendor-documents` bucket approach)
+- Path pattern: `vendor-media/{profileId}/{type}-{timestamp}.{ext}`
+
+#### Multi-tab profile layout
+- Profile page reorganized into four tabs: **Business**, **Online**, **Photos**, **Account**
+- Tab order later adjusted so Photos is accessible alongside business info
+- Profile header shows business name (falls back to email when empty)
+
+#### Commits
+- `4897bbb` fix: use vendor-documents bucket for logo/banner uploads
+- `896f5df` fix: use public vendor-media bucket for logo/banner uploads
+- `8df7005` feat: profile photo gallery, fix logo/banner display layout
+- `69e9649` fix: add gallery to uploadImage type union
+- `6b2ee46` feat: profile multi-tab layout — Photos, Business, Online, Account
+- `3a61076` feat: vendor photos on staff profile, reorder profile tabs, show name in header
+
+---
+
+### 🔄 Stage 8H — Onboarding Consolidation (IN PROGRESS — uncommitted)
+
+Goal: route all new vendors to the unified `/vendor/profile?setup=true` page instead of
+the separate 3-step onboarding wizard at `/vendor/profile/complete`.
+
+#### Done locally (not yet committed)
+- `auth/callback/route.ts`:
+  - Creates `User` + stub `VendorProfile` immediately for new Google OAuth users
+    (fixes proxy blocking with "no User record → /auth/login")
+  - Incomplete-profile redirect changed to `/vendor/profile?setup=true`
+- `vendor/profile/page.tsx` — reads `?setup=true` search param
+- `ProfileClient.tsx` — welcome banner when `isSetup=true`
+- App icon: `favicon.ico` removed, `icon.jpg` added (Next.js App Router metadata icon)
+
+#### Still required to finish
+- **`vendor/layout.tsx` profile guard** still redirects incomplete profiles to
+  `/vendor/profile/complete?setup=true`. Because `/vendor/profile` lives inside the
+  vendor layout, the new callback redirect bounces back to the old wizard before the
+  welcome banner is shown. Fix: exempt `/vendor/profile` from the completeness guard
+  (or move profile page outside the guarded layout).
+- **`auth/register/page.tsx`** still routes to `/vendor/profile/complete?setup=true` —
+  should align with `/vendor/profile?setup=true` once layout guard is fixed.
+- Decide whether to retire `(onboarding)/vendor/profile/complete/` or keep as fallback.
+- Commit and smoke-test full Google OAuth + email register onboarding paths.
+
+---
+
+### ✅ Database Security — Supabase RLS Enabled (June 22, 2026)
+
+Supabase flagged all 21 public tables as having RLS disabled, meaning anyone with the project URL could read, write, or delete data via the anon key. Fixed via Supabase SQL editor using the Chrome Claude extension.
+
+#### What was applied
+
+**Step 1 — Enabled RLS on all 21 tables**
+`ENABLE ROW LEVEL SECURITY` on: User, Application, ApplicationAddOn, ApplicationWeek, ApprovalLog, Booth, BoothAddOn, BoothAssignment, BoothType, BoothTypeDocRequirement, Document, Event, EventAddOn, EventWeek, Invoice, InvoiceLineItem, Message, Notification, Payment, VendorActivityLog, VendorProfile.
+
+**Step 2 — Created two helper functions**
+- `public.is_admin()` — returns true if the calling auth.uid() matches a User row with role = 'ADMIN'
+- `public.is_admin_or_staff()` — same, but role IN ('ADMIN', 'STAFF')
+- Both are `SECURITY DEFINER` with `search_path = public`
+
+**Step 3 — Role-based policies applied**
+
+| Role | Access |
+|---|---|
+| ADMIN | Full read/write on all tables |
+| STAFF | Full read on all tables; write on operational tables (Booth, BoothType, BoothAssignment, etc.) |
+| VENDOR | Read/write only their own data (scoped via VendorProfile.userId = auth.uid()) |
+
+Vendor ownership chains correctly resolved — e.g. Application is owned by VendorProfile (vendorId FK), not directly by User, so policies join through VendorProfile.
+
+#### Impact on the running app
+None. The app accesses the database entirely through Prisma on the server side via a direct PostgreSQL connection (`DATABASE_URL` port 6543), which authenticates as the database owner and bypasses RLS. RLS only governs direct Supabase anon/JWT client calls, which this app does not make for data queries.
+
+#### Result
+Supabase security scan: 21 critical errors → 0 errors. 5 lower-priority warnings remain (advisory, not security holes).
+
+---
+
+*Last updated: July 9, 2026 — Stages 8F–8H documented; module table, E2E status, and known-issues table corrected.*

@@ -1,13 +1,6 @@
-import Link from 'next/link'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import VerifyEmailClient from './VerifyEmailClient'
 
+<<<<<<< HEAD
 export default function VerifyEmailPage() {
   return (
     <div className="w-full max-w-md">
@@ -55,4 +48,13 @@ export default function VerifyEmailPage() {
       </Card>
     </div>
   )
+=======
+export default async function VerifyEmailPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ email?: string }>
+}) {
+  const params = await searchParams
+  return <VerifyEmailClient email={params.email ?? ''} />
+>>>>>>> e57e9d03c27e71b25f01385befd76405419c5cb3
 }

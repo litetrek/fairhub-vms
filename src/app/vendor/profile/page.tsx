@@ -3,7 +3,13 @@ import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import ProfileClient from './ProfileClient'
 
-export default async function VendorProfilePage() {
+export default async function VendorProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ setup?: string }>
+}) {
+  const params = await searchParams
+  const isSetup = params.setup === 'true'
   const supabase = await createClient()
   const {
     data: { user },
@@ -49,6 +55,7 @@ export default async function VendorProfilePage() {
       initialTaxId={profile.taxId ?? ''}
       email={user.email ?? ''}
       isGoogleUser={isGoogleUser}
+      isSetup={isSetup}
     />
   )
 }

@@ -72,7 +72,9 @@ export default function RegisterPage() {
       return
     }
 
-    if (data.user) {
+    // Session present only when email confirmation is disabled (local dev).
+    // When confirmation is enabled, profile is created in /auth/callback after verify.
+    if (data.user && data.session) {
       const res = await fetch('/api/auth/create-profile', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,13 +90,10 @@ export default function RegisterPage() {
       if (!res.ok) {
         console.error('Profile creation failed')
       }
-    }
 
-    // If email confirmation is disabled, session is returned immediately
-    if (data.session) {
       router.push('/vendor/profile/complete?setup=true')
     } else {
-      router.push('/auth/verify-email')
+      router.push(`/auth/verify-email?email=${encodeURIComponent(form.email)}`)
     }
   }
 

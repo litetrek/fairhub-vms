@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
+import { ensureVendorUser } from '@/lib/auth/ensure-vendor-user'
 import { logVendorActivity, getIpFromRequest } from '@/lib/vendor-activity'
 import { resolvePostLoginPath } from '@/lib/auth-redirect'
 
@@ -19,6 +20,18 @@ export async function GET(request: Request) {
       if (next === '/auth/reset-password') {
         return NextResponse.redirect(`${origin}/auth/reset-password`)
       }
+
+      await ensureVendorUser({
+        userId: data.user.id,
+        email: data.user.email!,
+        userMetadata: data.user.user_metadata,
+        emailConfirmed: !!data.user.email_confirmed_at,
+      })
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: data.user.id },
+        select: { id: true, phone: true },
+      })
 
       const vendorProfile = await prisma.vendorProfile.findUnique({
         where: { userId: data.user.id },

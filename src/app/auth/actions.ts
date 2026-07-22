@@ -74,7 +74,7 @@ export async function register(formData: FormData) {
     return { error: error.message }
   }
 
-  if (data.user) {
+  if (data.user && data.session) {
     try {
       await prisma.user.create({
         data: {
@@ -82,6 +82,7 @@ export async function register(formData: FormData) {
           email: data.user.email!,
           phone: phone || null,
           role: 'VENDOR',
+          emailVerified: true,
           vendorProfile: {
             create: {
               businessName,
@@ -94,9 +95,10 @@ export async function register(formData: FormData) {
     } catch (dbError) {
       console.error('Database error creating user:', dbError)
     }
+    redirect('/vendor/profile/complete?setup=true')
   }
 
-  redirect('/auth/verify-email')
+  redirect(`/auth/verify-email?email=${encodeURIComponent(email)}`)
 }
 
 export async function signOut() {
