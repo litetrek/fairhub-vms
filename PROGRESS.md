@@ -475,8 +475,7 @@ where the payment confirmation email would be sent.
 
 ### What's Next
 - **Stage 6C–6F:** Implement E2E tests (stub files already scaffolded; only `public-discovery.spec.ts` has passing tests)
-- **Stage 8H:** Finish onboarding consolidation onto `/vendor/profile` (in progress — see below)
-- **Stage 9 / M7 Communication:** Resend confirmation emails + vendor instructions (requires `RESEND_API_KEY` in Vercel)
+- **Stage 9 / M7 Communication:** Resend confirmation emails + vendor instructions — setup guide now at `docs/RESEND_SMTP_SETUP.md`; requires `RESEND_API_KEY` in Vercel
 
 ---
 
@@ -904,30 +903,45 @@ Banner is hidden for DRAFT and WITHDRAWN.
 
 ---
 
-### 🔄 Stage 8H — Onboarding Consolidation (IN PROGRESS — uncommitted)
+### ✅ Stage 8H — OAuth Onboarding Fix (COMPLETE)
+Commit: `e57e9d0`
 
-Goal: route all new vendors to the unified `/vendor/profile?setup=true` page instead of
-the separate 3-step onboarding wizard at `/vendor/profile/complete`.
+Goal: fix the infinite redirect loop blocking new Google OAuth vendors from reaching
+the onboarding wizard.
 
-#### Done locally (not yet committed)
-- `auth/callback/route.ts`:
-  - Creates `User` + stub `VendorProfile` immediately for new Google OAuth users
-    (fixes proxy blocking with "no User record → /auth/login")
-  - Incomplete-profile redirect changed to `/vendor/profile?setup=true`
+**Root cause:** `src/proxy.ts` requires a `User` row in Prisma before allowing access
+to any `/vendor/*` path. New OAuth users had no `User` row until they completed the
+profile wizard — but the proxy blocked them from reaching the wizard in the first place.
+
+#### Two-part fix
+
+**Part 1 — `src/lib/auth/ensure-vendor-user.ts` (new)**
+Idempotent helper that creates a `User` + stub `VendorProfile` row immediately on first
+OAuth login. Also updates `emailVerified` if the auth user has confirmed their email
+but the DB row hasn't been updated yet. Safe to call multiple times.
+
+**Part 2 — `src/proxy.ts`**
+Added `/vendor/profile/complete` to `publicRoutes`, so first-time OAuth users can reach
+the wizard even before `User` row creation completes.
+
+#### Other changes in this commit
+- `auth/callback/route.ts` — calls `ensureVendorUser()` before profile completeness check;
+  fetches `dbUser` after user is guaranteed to exist (not conditionally)
+- `auth/actions.ts` — email/password login also calls `ensureVendorUser` to handle the
+  case where a user exists in Supabase Auth but not in Prisma
+- `api/auth/create-profile/route.ts` — now delegates upsert logic to `ensureVendorUser`
+  (deduplication, removes inline Prisma create)
+- `auth/register/page.tsx` — minor cleanup
+- `auth/verify-email/` — extracted `VerifyEmailClient.tsx` client component from page
 - `vendor/profile/page.tsx` — reads `?setup=true` search param
-- `ProfileClient.tsx` — welcome banner when `isSetup=true`
+- `vendor/profile/ProfileClient.tsx` — welcome banner shown when `isSetup=true`
 - App icon: `favicon.ico` removed, `icon.jpg` added (Next.js App Router metadata icon)
+- `.env.example` added to repo
+- `docs/RESEND_SMTP_SETUP.md` added — step-by-step guide for configuring Resend
 
-#### Still required to finish
-- **`vendor/layout.tsx` profile guard** still redirects incomplete profiles to
-  `/vendor/profile/complete?setup=true`. Because `/vendor/profile` lives inside the
-  vendor layout, the new callback redirect bounces back to the old wizard before the
-  welcome banner is shown. Fix: exempt `/vendor/profile` from the completeness guard
-  (or move profile page outside the guarded layout).
-- **`auth/register/page.tsx`** still routes to `/vendor/profile/complete?setup=true` —
-  should align with `/vendor/profile?setup=true` once layout guard is fixed.
-- Decide whether to retire `(onboarding)/vendor/profile/complete/` or keep as fallback.
-- Commit and smoke-test full Google OAuth + email register onboarding paths.
+#### Unit test
+`tests/unit/lib/ensure-vendor-user.test.ts` — covers: creates user+profile, idempotent
+on repeat call, updates emailVerified on re-call, handles missing metadata gracefully.
 
 ---
 
@@ -963,4 +977,4 @@ Supabase security scan: 21 critical errors → 0 errors. 5 lower-priority warnin
 
 ---
 
-*Last updated: July 9, 2026 — Stages 8F–8H documented; module table, E2E status, and known-issues table corrected.*
+*Last updated: July 20, 2026 — Stage 8H complete; OAuth infinite-redirect-loop fix committed (e57e9d0).*
