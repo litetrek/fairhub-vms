@@ -46,8 +46,9 @@ export default async function Home() {
     } = await supabase.auth.getUser()
 
     if (user) {
-      const role = user.user_metadata?.role || 'VENDOR'
-      redirect(role === 'VENDOR' ? '/vendor/dashboard' : '/staff/queue')
+      const { resolvePostLoginPath } = await import('@/lib/auth-redirect')
+      const result = await resolvePostLoginPath(user.id)
+      if ('path' in result) redirect(result.path)
     }
   } catch {
     // Supabase not configured — fall through to landing page

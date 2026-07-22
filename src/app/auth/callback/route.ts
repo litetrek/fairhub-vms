@@ -2,21 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { logVendorActivity, getIpFromRequest } from '@/lib/vendor-activity'
-
-function isProfileComplete(profile: {
-  businessName: string
-  contactName: string
-  phone?: string | null
-  description?: string | null
-} | null): boolean {
-  if (!profile) return false
-  return !!(
-    profile.businessName?.trim() &&
-    profile.contactName?.trim() &&
-    profile.phone?.trim() &&
-    profile.description?.trim()
-  )
-}
+import { resolvePostLoginPath } from '@/lib/auth-redirect'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -29,29 +15,15 @@ export async function GET(request: Request) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
-      const role = data.user.user_metadata?.role || 'VENDOR'
-
-      if (role !== 'VENDOR') {
-        return NextResponse.redirect(`${origin}/staff/queue`)
+      // Password recovery: land on reset form before portal routing
+      if (next === '/auth/reset-password') {
+        return NextResponse.redirect(`${origin}/auth/reset-password`)
       }
 
       const vendorProfile = await prisma.vendorProfile.findUnique({
         where: { userId: data.user.id },
-        select: {
-          id: true,
-          businessName: true,
-          contactName: true,
-          description: true,
-        },
+        select: { id: true },
       })
-
-      // Also get phone from User table for the completeness check
-      const dbUser = vendorProfile
-        ? await prisma.user.findUnique({
-            where: { id: data.user.id },
-            select: { phone: true },
-          })
-        : null
 
       if (vendorProfile) {
         await logVendorActivity({
@@ -63,21 +35,16 @@ export async function GET(request: Request) {
         })
       }
 
-      // Post-Stripe redirect: send vendor straight to their invoice page
-      if (next?.startsWith('/vendor/') && vendorProfile) {
-        const dest = payment ? `${origin}${next}?payment=${payment}` : `${origin}${next}`
-        return NextResponse.redirect(dest)
+      const result = await resolvePostLoginPath(data.user.id, {
+        redirect: next,
+        payment,
+      })
+
+      if ('error' in result) {
+        return NextResponse.redirect(`${origin}/auth/login?error=auth_callback_error`)
       }
 
-      const profileWithPhone = vendorProfile
-        ? { ...vendorProfile, phone: dbUser?.phone }
-        : null
-
-      if (!isProfileComplete(profileWithPhone)) {
-        return NextResponse.redirect(`${origin}/vendor/profile/complete?setup=true`)
-      }
-
-      return NextResponse.redirect(`${origin}/vendor/dashboard`)
+      return NextResponse.redirect(`${origin}${result.path}`)
     }
   }
 

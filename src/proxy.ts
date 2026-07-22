@@ -49,6 +49,8 @@ export async function proxy(request: NextRequest) {
     '/auth/register',
     '/auth/verify-email',
     '/auth/callback',
+    '/auth/forgot-password',
+    '/auth/reset-password',
     '/staff/login',
     '/fair/',
   ]
@@ -97,9 +99,9 @@ export async function proxy(request: NextRequest) {
     const { data: { session } } = await supabase.auth.getSession()
     const provider = session?.user?.app_metadata?.provider
     if (provider !== 'email') {
-      console.log('[proxy] STAFF/ADMIN with non-email provider:', provider, '→ sign out + redirect /staff/login')
+      console.log('[proxy] STAFF/ADMIN with non-email provider:', provider, '→ sign out + redirect /auth/login')
       await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/staff/login?error=oauth_not_allowed', request.url))
+      return NextResponse.redirect(new URL('/auth/login?error=oauth_not_allowed', request.url))
     }
   }
 

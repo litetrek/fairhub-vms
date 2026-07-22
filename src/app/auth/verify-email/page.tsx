@@ -44,7 +44,7 @@ export default function VerifyEmailPage() {
         <CardContent className="space-y-3">
           <p className="text-sm text-slate-500">
             Didn&apos;t receive it? Check your spam folder or{' '}
-            <span className="text-slate-900 font-medium cursor-pointer hover:underline">
+            <span className="text-slate-900 font-medium cursor-pointer">
               resend the email
             </span>
           </p>

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { prisma } from '@/lib/prisma'
 import { logVendorActivity } from '@/lib/vendor-activity'
+import { resolvePostLoginPath } from '@/lib/auth-redirect'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -21,14 +22,9 @@ export async function login(formData: FormData) {
     return { error: error.message }
   }
 
-  // Read role from the User table — metadata may be absent for staff accounts.
-  const dbUser = await prisma.user.findUnique({
-    where: { id: data.user.id },
-    select: { role: true },
-  })
-  const role = dbUser?.role ?? 'VENDOR'
+  const result = await resolvePostLoginPath(data.user.id)
 
-  if (role === 'VENDOR') {
+  if ('path' in result && result.role === 'VENDOR') {
     const vendorProfile = await prisma.vendorProfile.findUnique({
       where: { userId: data.user.id },
       select: { id: true },
@@ -44,11 +40,11 @@ export async function login(formData: FormData) {
 
   revalidatePath('/', 'layout')
 
-  if (role === 'VENDOR') {
-    redirect('/vendor/dashboard')
-  } else {
-    redirect('/staff/queue')
+  if ('error' in result) {
+    return { error: result.error }
   }
+
+  redirect(result.path)
 }
 
 export async function register(formData: FormData) {
