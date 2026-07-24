@@ -1,8 +1,23 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
-import Link from 'next/link'
-import { ShieldCheck, User, Store, ChevronDown, Loader2 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ShieldCheck, User, Store, ChevronDown, Loader2, MoreHorizontal } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
 type Role = 'VENDOR' | 'STAFF' | 'ADMIN'
 
@@ -36,11 +51,14 @@ function UserTableRow({
   user,
   currentUserId,
   onRoleChange,
+  onRequestDelete,
 }: {
   user: UserRow
   currentUserId: string
   onRoleChange: (id: string, newRole: Role) => Promise<void>
+  onRequestDelete: (user: UserRow) => void
 }) {
+  const router = useRouter()
   const [pending, startTransition] = useTransition()
   const isSelf = user.id === currentUserId
 
@@ -82,15 +100,39 @@ function UserTableRow({
           <span className="ml-2 text-xs text-muted-foreground">(you)</span>
         )}
       </td>
-      <td className="px-4 py-3">
-        {user.role === 'VENDOR' && (
-          <Link
-            href={`/admin/users/${user.id}`}
-            className="text-xs text-primary hover:underline"
+      <td className="px-4 py-3 text-right w-12">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="User actions"
+              />
+            }
           >
-            Activity
-          </Link>
-        )}
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-40">
+            {user.role === 'VENDOR' && (
+              <DropdownMenuItem
+                onClick={() => router.push(`/admin/users/${user.id}`)}
+              >
+                View activity
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              variant="destructive"
+              disabled={isSelf}
+              onClick={() => {
+                if (!isSelf) onRequestDelete(user)
+              }}
+            >
+              Delete user
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </td>
     </tr>
   )
@@ -206,6 +248,9 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string>('')
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   async function fetchUsers() {
     setLoading(true)
@@ -234,6 +279,27 @@ export default function AdminUsersPage() {
     )
   }
 
+  async function handleConfirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    setDeleteError(null)
+    try {
+      const res = await fetch(`/api/admin/users/${deleteTarget.id}`, {
+        method: 'DELETE',
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Failed to delete user.')
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id))
+      setDeleteTarget(null)
+    } catch (err: unknown) {
+      setDeleteError(err instanceof Error ? err.message : 'Unexpected error.')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -247,7 +313,7 @@ export default function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Manage users</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Change roles or create new staff accounts.
+          Change roles, delete accounts, or create new staff accounts.
         </p>
       </div>
 
@@ -267,8 +333,8 @@ export default function AdminUsersPage() {
               <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
                 Change role
               </th>
-              <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Activity
+              <th className="px-4 py-3 text-xs font-medium uppercase tracking-wider text-muted-foreground text-right w-12">
+                <span className="sr-only">Actions</span>
               </th>
             </tr>
           </thead>
@@ -289,6 +355,10 @@ export default function AdminUsersPage() {
                   user={u}
                   currentUserId={currentUserId}
                   onRoleChange={handleRoleChange}
+                  onRequestDelete={(user) => {
+                    setDeleteError(null)
+                    setDeleteTarget(user)
+                  }}
                 />
               ))
             )}
@@ -297,6 +367,56 @@ export default function AdminUsersPage() {
       </div>
 
       <CreateStaffForm onCreated={fetchUsers} />
+
+      <Dialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open && !deleting) {
+            setDeleteTarget(null)
+            setDeleteError(null)
+          }
+        }}
+      >
+        <DialogContent showCloseButton={false} className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete user permanently?</DialogTitle>
+            <DialogDescription>
+              This will permanently erase{' '}
+              <span className="font-medium text-foreground">
+                {deleteTarget?.email}
+              </span>{' '}
+              and all related data (profile, applications, documents, invoices,
+              payments, and auth account). This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          {deleteError && (
+            <p className="text-sm text-destructive px-1">{deleteError}</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={deleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting…
+                </>
+              ) : (
+                'Delete permanently'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
